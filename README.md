@@ -1,4 +1,4 @@
-# Turbo Go (Version 1.0) 🚀
+# Turbo Go (Version 0.01) 🚀
 
 > **Retro Borland Turbo Pascal / Turbo C Look & Feel IDE for the Go Language**
 
