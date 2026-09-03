@@ -2,6 +2,93 @@
 
 > **Retro Borland Turbo Pascal / Turbo C Look & Feel IDE for the Go Language**
 
+**Turbo Go** is a retro terminal development environment (TUI IDE) that brings together the classic 90s visual interface of Borland's legendary **Turbo Pascal** and **Turbo C** (Turbo Vision blue editor canvas, double-line frames `╔═╗`, top pull-down menu bar, bottom hotkey bar, and the `Alt+F5` User Screen) with the modern **Go compiler and Delve debugger**.
+
+---
+
+## 📸 Key Features
+
+* **Classic Borland Turbo Vision UI**:
+* Signature Turbo Blue editor canvas (`#0000A8`) with double-line box-drawing characters (`╔═╗`, `║ ║`, `╚═╝`)
+* Text drop shadows and retro window headers (`[■] 1 NONAME00.GO [▲]`)
+* Top pull-down menu bar (`File`, `Edit`, `Search`, `Run`, `Compile`, `Debug`, `Window`, `Help`)
+* Bottom hotkey bar (`F1 Help`, `F2 Save`, `F3 Open`, `Alt+F9 Compile`, `F9 Make`, `Ctrl+F9 Run`, `Alt+F5 User`, `F10 Menu`)
+
+
+* **Go Syntax Highlighting**:
+* Syntax highlighting for Go keywords, types, literals (strings, numbers, runes), built-in functions, and comments
+
+
+* **Compiling Modal Dialog**:
+* Authentic Borland-style "Compiling..." modal dialog displaying target file, total lines, error/warning count, and elapsed build time
+* Displays file name, line number, and error messages on build failures, with **instant jump to the error line in the editor**
+
+
+* **Alt+F5 User Screen**:
+* The hallmark Turbo C feature: switch to a full-screen DOS console view to inspect execution output, and return to the IDE with any keypress
+
+
+* **Interactive Delve Debugger Integration**:
+* Toggle breakpoints (`●`) with `F4` ➔ highlighted across the entire line with a **solid red bar**
+* `F5` Start Debugging / Continue, `F8` Step Over, `F7` Trace Into
+* Active execution line highlighted with a **solid yellow bar**
+* Real-time variable inspection (name, type, value) via the bottom **Watches Window (`Alt+W`)**
+
+
+* **Borland Retro Sound Effects (Sound FX)**:
+* Crisp dual-tone beep on successful compilation; deep error buzz on build failure
+* Satisfying ping audio feedback on breakpoint hits and stepping
+* Sound toggle via `F10` ➔ `Options` ➔ `Sound: ON / OFF`
+
+
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut | Function | Description |
+| --- | --- | --- |
+| **F1** | Help / About | Open Turbo Go info and help dialog |
+| **F2** | Save | Save current buffer / Save As |
+| **F3** | Open | Open file browser dialog |
+| **F4** | **Breakpoint** | Set/unset breakpoint (`●`) on the current line |
+| **F5** | **Debug / Continue** | Start debugging / Continue to next breakpoint |
+| **F7** | **Trace Into** | Step into function |
+| **F8** | **Step Over** | Step over function |
+| **Ctrl + F2** | **Reset Debugger** | Terminate debug session and reset instruction pointer |
+| **Alt + W** | **Watches Window** | Toggle bottom Watches window |
+| **Ctrl + F** | **Find** | Open find/search dialog |
+| **Ctrl + L** | **Search Again** | Find next occurrence |
+| **Alt + G** | **Go to Line** | Jump cursor to specific line number (`Ctrl+G`) |
+| **Alt + L** | **Line Numbers** | Toggle line number gutter on/off (`Option+L`, `F6`) |
+| **Ctrl + F9** | **Run** | Build, execute, and display output in the **User Screen** |
+| **Alt + F9** | **Compile** | Build with the "Compiling..." statistics modal |
+| **F9** | Make | Execute build |
+| **Alt + F5** | **User Screen** | Toggle program execution output screen |
+| **F10** | Menu Bar | Focus top pull-down menu bar |
+| **Alt + X** | Exit | Quit Turbo Go |
+| **Shift + Arrow Keys** | **Select Block** | Select/highlight text block |
+| **Ctrl + Ins** | **Copy** | Copy selected block to clipboard (`Edit ➔ Copy`) |
+| **Shift + Del** | **Cut** | Cut selected block (`Edit ➔ Cut`) |
+| **Shift + Ins** | **Paste** | Paste clipboard contents at cursor (`Edit ➔ Paste`) |
+| **Esc** | Close | Close active modal/dialog or clear selection |
+
+---
+
+## 🛠️ Build & Run
+
+**1. Build and run binary**
+
+```bash
+go build -o bin/tg ./cmd/tg
+./bin/tg
+
+```
+
+# Turbo Go (Version 0.01) 🚀
+
+> **Retro Borland Turbo Pascal / Turbo C Look & Feel IDE for the Go Language**
+
 **Turbo Go**는 90년대 볼랜드(Borland)의 전설적인 **Turbo Pascal**과 **Turbo C** 특유의 비주얼 인터페이스(Turbo Vision 파란색 에디터 창, 이중선 프레임 `╔═╗`, 상단 드롭다운 메뉴바, 하단 핫키 바, `Alt+F5` User Screen)에 현대의 **Go 컴파일러 및 Delve 디버거**를 연동한 레트로 터미널 개발 환경(TUI IDE)입니다.
 
 ---
