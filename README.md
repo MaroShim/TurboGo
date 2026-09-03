@@ -1,4 +1,4 @@
-# Turbo Go (Version 0.01) 🚀
+# Turbo Go (Version 0.89) 🚀
 
 > **Retro Borland Turbo Pascal / Turbo C Look & Feel IDE for the Go Language**
 
@@ -85,7 +85,7 @@ go build -o bin/tg ./cmd/tg
 
 ```
 
-# Turbo Go (Version 0.01) 🚀
+# Turbo Go (Version 0.89) 🚀
 
 > **Retro Borland Turbo Pascal / Turbo C Look & Feel IDE for the Go Language**
 
