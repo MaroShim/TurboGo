@@ -212,3 +212,49 @@ func TestMenuBarOpenMenu(t *testing.T) {
 		t.Errorf("expected dropdown to be closed after Close")
 	}
 }
+
+func TestClipboardSystem(t *testing.T) {
+	testStr := "TurboGoClipboardTest_12345"
+	SetClipboard(testStr)
+	got := GetClipboard()
+	t.Logf("Set %q, Got %q", testStr, got)
+	if got != testStr {
+		t.Errorf("expected %q, got %q", testStr, got)
+	}
+}
+
+func TestCutAndPasteWorkflow(t *testing.T) {
+	ed := NewEditor("", 1)
+	ed.Lines = []string{"Hello World from TurboGo"}
+	ed.CursorY = 0
+	ed.CursorX = 6
+
+	// Select "World"
+	ed.StartSelection()
+	ed.CursorX = 11
+	ed.UpdateSelection()
+
+	// Cut "World"
+	if !ed.CutSelection() {
+		t.Fatalf("CutSelection failed")
+	}
+	if ed.Lines[0] != "Hello  from TurboGo" {
+		t.Errorf("expected 'Hello  from TurboGo', got %q", ed.Lines[0])
+	}
+
+	// Verify clipboard has "World"
+	clip := GetClipboard()
+	if clip != "World" {
+		t.Errorf("expected clipboard 'World', got %q", clip)
+	}
+
+	// Move to end and Paste
+	ed.CursorX = len([]rune(ed.Lines[0]))
+	ed.PasteText(clip)
+
+	expected := "Hello  from TurboGoWorld"
+	if ed.Lines[0] != expected {
+		t.Errorf("expected %q, got %q", expected, ed.Lines[0])
+	}
+}
+
