@@ -84,6 +84,7 @@ go build -o bin/tg ./cmd/tg
 ./bin/tg
 
 ```
+---
 
 # Turbo Go (Version 0.89) 🚀
 
