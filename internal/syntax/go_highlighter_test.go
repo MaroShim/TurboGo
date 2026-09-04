@@ -46,3 +46,64 @@ func TestHighlightLine(t *testing.T) {
 		t.Errorf("expected comment to have ColorSyntaxComment, got %v", fgComm)
 	}
 }
+
+func TestHighlightLineEdgeCases(t *testing.T) {
+	baseStyle := tcell.StyleDefault
+
+	// 1. Empty line
+	inBlock := false
+	tokens := HighlightLine("", baseStyle, &inBlock)
+	if len(tokens) != 0 {
+		t.Errorf("expected 0 tokens for empty line, got %d", len(tokens))
+	}
+
+	// 2. Block comment spanning lines
+	inBlock = false
+	line1 := "/* start comment"
+	tokens1 := HighlightLine(line1, baseStyle, &inBlock)
+	if !inBlock {
+		t.Errorf("expected inBlock true after unclosed block comment")
+	}
+	fg1, _, _ := tokens1[0].Style.Decompose()
+	if fg1 != ColorSyntaxComment {
+		t.Errorf("expected ColorSyntaxComment for line1, got %v", fg1)
+	}
+
+	line2 := "still comment */"
+	tokens2 := HighlightLine(line2, baseStyle, &inBlock)
+	if inBlock {
+		t.Errorf("expected inBlock false after closing */")
+	}
+	fg2, _, _ := tokens2[len(tokens2)-1].Style.Decompose()
+	if fg2 != ColorSyntaxComment {
+		t.Errorf("expected ColorSyntaxComment for line2, got %v", fg2)
+	}
+
+	// 3. Numbers: decimal, hex, float
+	lineNum := "x := 42 + 0xFF + 3.14"
+	tokensNum := HighlightLine(lineNum, baseStyle, &inBlock)
+	// Find index of '4'
+	numIdx := 5
+	fgNum, _, _ := tokensNum[numIdx].Style.Decompose()
+	if fgNum != ColorSyntaxNumber {
+		t.Errorf("expected ColorSyntaxNumber for '42', got %v", fgNum)
+	}
+
+	// 4. Keyword embedded in identifier: 'deferment' should not be highlighted as 'defer'
+	lineIdent := "deferment := true"
+	tokensIdent := HighlightLine(lineIdent, baseStyle, &inBlock)
+	fgIdent, _, _ := tokensIdent[0].Style.Decompose()
+	if fgIdent == ColorSyntaxKeyword {
+		t.Errorf("identifier 'deferment' should not be highlighted as keyword")
+	}
+
+	// 5. Raw string literal with backticks
+	lineRaw := "msg := `hello\nworld`"
+	tokensRaw := HighlightLine(lineRaw, baseStyle, &inBlock)
+	// Find index of '`'
+	backtickIdx := 7
+	fgRaw, _, _ := tokensRaw[backtickIdx].Style.Decompose()
+	if fgRaw != ColorSyntaxString {
+		t.Errorf("expected ColorSyntaxString for raw string, got %v", fgRaw)
+	}
+}
