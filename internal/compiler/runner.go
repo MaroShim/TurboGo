@@ -17,6 +17,7 @@ type CompileError struct {
 	File    string
 	Line    int
 	Column  int
+	Level   string // "error" or "warning"
 	Message string
 }
 
@@ -26,6 +27,8 @@ type BuildResult struct {
 	LinesCompiled int
 	Duration      time.Duration
 	Errors        []CompileError
+	ErrorCount    int
+	WarningCount  int
 	BinaryPath    string
 	RawOutput     string
 }
@@ -82,8 +85,13 @@ func Build(targetPath string) *BuildResult {
 		dir = "."
 	}
 
+	ext := ""
+	if os.PathSeparator == '\\' {
+		ext = ".exe"
+	}
+
 	// Create temp binary output
-	tmpBin := filepath.Join(os.TempDir(), fmt.Sprintf("turbogo_bin_%d", time.Now().UnixNano()))
+	tmpBin := filepath.Join(os.TempDir(), fmt.Sprintf("turbogo_bin_%d%s", time.Now().UnixNano(), ext))
 	res.BinaryPath = tmpBin
 
 	cmd := exec.Command("go", "build", "-o", tmpBin, filepath.Base(targetPath))
@@ -100,23 +108,16 @@ func Build(targetPath string) *BuildResult {
 
 	if err == nil {
 		res.Success = true
+		res.Errors, res.ErrorCount, res.WarningCount = parseDiagnostics(res.RawOutput)
 		return res
 	}
 
 	res.Success = false
-	// Parse error lines
-	matches := errRegex.FindAllStringSubmatch(res.RawOutput, -1)
-	for _, m := range matches {
-		if len(m) == 5 {
-			lineNum, _ := strconv.Atoi(m[2])
-			colNum, _ := strconv.Atoi(m[3])
-			res.Errors = append(res.Errors, CompileError{
-				File:    m[1],
-				Line:    lineNum,
-				Column:  colNum,
-				Message: strings.TrimSpace(m[4]),
-			})
-		}
+	res.Errors, res.ErrorCount, res.WarningCount = parseDiagnostics(res.RawOutput)
+	if res.ErrorCount == 0 && len(res.Errors) > 0 {
+		res.ErrorCount = len(res.Errors)
+	} else if res.ErrorCount == 0 {
+		res.ErrorCount = 1
 	}
 
 	return res
@@ -135,7 +136,11 @@ func BuildDebug(targetPath string) *BuildResult {
 		dir = "."
 	}
 
-	tmpBin := filepath.Join(os.TempDir(), fmt.Sprintf("turbogo_dbg_%d", time.Now().UnixNano()))
+	ext := ""
+	if os.PathSeparator == '\\' {
+		ext = ".exe"
+	}
+	tmpBin := filepath.Join(os.TempDir(), fmt.Sprintf("turbogo_dbg_%d%s", time.Now().UnixNano(), ext))
 	res.BinaryPath = tmpBin
 
 	cmd := exec.Command("go", "build", "-gcflags=all=-N -l", "-o", tmpBin, filepath.Base(targetPath))
@@ -152,25 +157,49 @@ func BuildDebug(targetPath string) *BuildResult {
 
 	if err == nil {
 		res.Success = true
+		res.Errors, res.ErrorCount, res.WarningCount = parseDiagnostics(res.RawOutput)
 		return res
 	}
 
 	res.Success = false
-	matches := errRegex.FindAllStringSubmatch(res.RawOutput, -1)
+	res.Errors, res.ErrorCount, res.WarningCount = parseDiagnostics(res.RawOutput)
+	if res.ErrorCount == 0 && len(res.Errors) > 0 {
+		res.ErrorCount = len(res.Errors)
+	} else if res.ErrorCount == 0 {
+		res.ErrorCount = 1
+	}
+
+	return res
+}
+
+func parseDiagnostics(rawOutput string) ([]CompileError, int, int) {
+	var errs []CompileError
+	errCount := 0
+	warnCount := 0
+
+	matches := errRegex.FindAllStringSubmatch(rawOutput, -1)
 	for _, m := range matches {
 		if len(m) == 5 {
 			lineNum, _ := strconv.Atoi(m[2])
 			colNum, _ := strconv.Atoi(m[3])
-			res.Errors = append(res.Errors, CompileError{
+			msg := strings.TrimSpace(m[4])
+			level := "error"
+			if strings.HasPrefix(strings.ToLower(msg), "warning") {
+				level = "warning"
+				warnCount++
+			} else {
+				errCount++
+			}
+			errs = append(errs, CompileError{
 				File:    m[1],
 				Line:    lineNum,
 				Column:  colNum,
-				Message: strings.TrimSpace(m[4]),
+				Level:   level,
+				Message: msg,
 			})
 		}
 	}
-
-	return res
+	return errs, errCount, warnCount
 }
 
 // Run executes the binary or target file

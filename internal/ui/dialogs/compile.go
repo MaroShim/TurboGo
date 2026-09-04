@@ -75,8 +75,10 @@ func (cd *CompileDialog) Draw(screen tcell.Screen, screenW, screenH int) {
 	drawRow(2, "Total lines:", fmt.Sprintf("%d", cd.Lines), textStyle)
 
 	errCount := 0
+	warnCount := 0
 	if cd.Result != nil {
-		errCount = len(cd.Result.Errors)
+		errCount = cd.Result.ErrorCount
+		warnCount = cd.Result.WarningCount
 	}
 
 	errColor := tcell.ColorGreen
@@ -84,7 +86,7 @@ func (cd *CompileDialog) Draw(screen tcell.Screen, screenW, screenH int) {
 		errColor = tcell.ColorRed
 	}
 	drawRow(3, "Total errors:", fmt.Sprintf("%d", errCount), textStyle.Foreground(errColor).Bold(true))
-	drawRow(4, "Warnings:", "0", textStyle)
+	drawRow(4, "Warnings:", fmt.Sprintf("%d", warnCount), textStyle)
 
 	elapsed := "0.00s"
 	statusStr := "Compiling..."
