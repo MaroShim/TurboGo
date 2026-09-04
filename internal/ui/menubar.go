@@ -99,7 +99,7 @@ func NewMenuBar() *MenuBar {
 					{Label: "Trace Into", Shortcut: "F7", ActionID: "debug_step_into"},
 					{Label: "Toggle Breakpoint", Shortcut: "F4", ActionID: "debug_toggle_bp"},
 					{Label: "Stop Debugger", Shortcut: "Ctrl+F2", ActionID: "debug_stop"},
-					{Label: "Watches Window", Shortcut: "Alt+W", ActionID: "debug_watches"},
+					{Label: "Watches Window", ActionID: "debug_watches"},
 				},
 			},
 			{
@@ -141,6 +141,14 @@ func NewMenuBar() *MenuBar {
 
 // Open activates the menubar on F10
 func (m *MenuBar) Open() {
+	m.OpenMenu(0)
+}
+
+// OpenMenu activates the menubar and opens the menu at index
+func (m *MenuBar) OpenMenu(index int) {
+	if index >= 0 && index < len(m.Menus) {
+		m.ActiveMenu = index
+	}
 	m.Active = true
 	m.OpenDropdown = true
 	m.ActiveItem = 0

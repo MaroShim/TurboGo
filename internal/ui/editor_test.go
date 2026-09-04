@@ -178,3 +178,37 @@ func TestEditorSelectionAndClipboard(t *testing.T) {
 		t.Errorf("expected line after paste 'hello world go', got %q", ed.Lines[0])
 	}
 }
+
+func TestMenuBarOpenMenu(t *testing.T) {
+	mb := NewMenuBar()
+	if mb.Active {
+		t.Errorf("expected menubar to start inactive")
+	}
+
+	// Test OpenMenu for File menu (index 0)
+	mb.OpenMenu(0)
+	if !mb.Active {
+		t.Errorf("expected menubar to be active")
+	}
+	if !mb.OpenDropdown {
+		t.Errorf("expected dropdown to be open")
+	}
+	if mb.ActiveMenu != 0 {
+		t.Errorf("expected ActiveMenu to be 0, got %d", mb.ActiveMenu)
+	}
+
+	// Test OpenMenu for Edit menu (index 1)
+	mb.OpenMenu(1)
+	if mb.ActiveMenu != 1 {
+		t.Errorf("expected ActiveMenu to be 1, got %d", mb.ActiveMenu)
+	}
+
+	// Test Close
+	mb.Close()
+	if mb.Active {
+		t.Errorf("expected menubar to be inactive after Close")
+	}
+	if mb.OpenDropdown {
+		t.Errorf("expected dropdown to be closed after Close")
+	}
+}

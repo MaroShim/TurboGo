@@ -314,8 +314,8 @@ func main() {
 			isAlt := (mod == tcell.ModAlt)
 
 			// macOS Option key translates characters to special unicode symbols by default:
-			// Option+L = '¬', Option+X = '≈', Option+W = '∑', Option+N = '˜', Option+S = 'ß', Option+C = 'ç', Option+Q = 'œ', Option+G = '©'
-			if isAlt || ch == '¬' || ch == '≈' || ch == '∑' || ch == '˜' || ch == 'ß' || ch == 'ç' || ch == 'œ' || ch == '©' {
+			// Option+L = '¬', Option+X = '≈', Option+W = '∑', Option+N = '˜', Option+S = 'ß', Option+C = 'ç', Option+Q = 'œ', Option+G = '©', Option+F = 'ƒ'
+			if isAlt || ch == '¬' || ch == '≈' || ch == '∑' || ch == '˜' || ch == 'ß' || ch == 'ç' || ch == 'œ' || ch == '©' || ch == 'ƒ' {
 				if isAlt && key == tcell.KeyF9 {
 					// Alt+F9: Compile
 					dispatchAction("compile_compile")
@@ -324,21 +324,45 @@ func main() {
 					// Alt+F5: User Screen
 					dispatchAction("run_userscreen")
 					continue
+				} else if ch == 'f' || ch == 'F' || ch == 'ƒ' {
+					// Alt+F: Open File Menu
+					app.OpenMenuAt(0)
+					continue
+				} else if ch == 'e' || ch == 'E' {
+					// Alt+E: Open Edit Menu
+					app.OpenMenuAt(1)
+					continue
+				} else if ch == 's' || ch == 'S' || ch == 'ß' {
+					// Alt+S: Open Search Menu
+					app.OpenMenuAt(2)
+					continue
+				} else if ch == 'r' || ch == 'R' {
+					// Alt+R: Open Run Menu
+					app.OpenMenuAt(3)
+					continue
+				} else if ch == 'c' || ch == 'C' || ch == 'ç' {
+					// Alt+C: Open Compile Menu
+					app.OpenMenuAt(4)
+					continue
+				} else if ch == 'd' || ch == 'D' {
+					// Alt+D: Open Debug Menu
+					app.OpenMenuAt(5)
+					continue
+				} else if ch == 'o' || ch == 'O' {
+					// Alt+O: Open Options Menu
+					app.OpenMenuAt(6)
+					continue
 				} else if ch == 'w' || ch == 'W' || ch == '∑' {
-					// Alt+W: Watches Window
-					dispatchAction("debug_watches")
+					// Alt+W: Open Window Menu
+					app.OpenMenuAt(7)
+					continue
+				} else if ch == 'h' || ch == 'H' {
+					// Alt+H: Open Help Menu
+					app.OpenMenuAt(8)
 					continue
 				} else if ch == 'n' || ch == 'N' || ch == '˜' {
 					// Alt+N: Step Over
 					dispatchAction("debug_step_over")
-					continue
-				} else if ch == 's' || ch == 'S' || ch == 'ß' {
-					// Alt+S: Step Into
-					dispatchAction("debug_step_into")
-					continue
-				} else if ch == 'c' || ch == 'C' || ch == 'ç' {
-					// Alt+C: Continue
-					dispatchAction("debug_continue")
 					continue
 				} else if ch == 'l' || ch == 'L' || ch == '¬' {
 					// Alt+L: Toggle Line Numbers

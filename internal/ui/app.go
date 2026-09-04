@@ -120,6 +120,10 @@ func (a *App) ToggleMenu() {
 	}
 }
 
+func (a *App) OpenMenuAt(index int) {
+	a.menuBar.OpenMenu(index)
+}
+
 func (a *App) IsMenuActive() bool {
 	return a.menuBar.Active
 }

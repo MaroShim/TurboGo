@@ -32,7 +32,7 @@
 * Toggle breakpoints (`●`) with `F4` ➔ highlighted across the entire line with a **solid red bar**
 * `F5` Start Debugging / Continue, `F8` Step Over, `F7` Trace Into
 * Active execution line highlighted with a **solid yellow bar**
-* Real-time variable inspection (name, type, value) via the bottom **Watches Window (`Alt+W`)**
+* Real-time variable inspection (name, type, value) via the bottom **Watches Window** (Debug menu)
 
 
 * **Borland Retro Sound Effects (Sound FX)**:
@@ -48,6 +48,15 @@
 
 | Shortcut | Function | Description |
 | --- | --- | --- |
+| **Alt + F** | **File Menu** | Open File menu directly |
+| **Alt + E** | **Edit Menu** | Open Edit menu directly |
+| **Alt + S** | **Search Menu** | Open Search menu directly |
+| **Alt + R** | **Run Menu** | Open Run menu directly |
+| **Alt + C** | **Compile Menu** | Open Compile menu directly |
+| **Alt + D** | **Debug Menu** | Open Debug menu directly |
+| **Alt + O** | **Options Menu** | Open Options menu directly |
+| **Alt + W** | **Window Menu** | Open Window menu directly |
+| **Alt + H** | **Help Menu** | Open Help menu directly |
 | **F1** | Help / About | Open Turbo Go info and help dialog |
 | **F2** | Save | Save current buffer / Save As |
 | **F3** | Open | Open file browser dialog |
@@ -56,7 +65,6 @@
 | **F7** | **Trace Into** | Step into function |
 | **F8** | **Step Over** | Step over function |
 | **Ctrl + F2** | **Reset Debugger** | Terminate debug session and reset instruction pointer |
-| **Alt + W** | **Watches Window** | Toggle bottom Watches window |
 | **Ctrl + F** | **Find** | Open find/search dialog |
 | **Ctrl + L** | **Search Again** | Find next occurrence |
 | **Alt + G** | **Go to Line** | Jump cursor to specific line number (`Ctrl+G`) |
@@ -84,10 +92,6 @@ go build -o bin/tg ./cmd/tg
 ./bin/tg
 
 ```
-.
-.
-.
----
 
 # Turbo Go (Version 0.89) 🚀
 
@@ -115,7 +119,7 @@ go build -o bin/tg ./cmd/tg
   - `F4`로 브레이크포인트(`●`) 설정/해제 ➔ **한 줄 전체 빨간색 바(`Red`)** 표시
   - `F5` 디버깅 시작 / Continue, `F8` Step Over, `F7` Trace Into
   - 실행 중 현재 멈춘 라인은 **한 줄 전체 노란색 바(`Yellow`)**로 시선 집중
-  - 하단 **Watches 윈도우(`Alt+W`)**를 통해 로컬 변수명, 타입, 값을 실시간 감시
+  - 하단 **Watches 윈도우**(Debug 메뉴)를 통해 로컬 변수명, 타입, 값을 실시간 감시
 - **볼랜드 레트로 사운드 이펙트 (Sound FX)**:
   - 컴파일 성공 시 경쾌한 2단 비프음, 컴파일 에러 시 묵직한 에러음
   - 디버거 브레이크포인트 적중 및 스텝 이동 시 기분 좋은 핑 사운드
@@ -127,6 +131,15 @@ go build -o bin/tg ./cmd/tg
 
 | 단축키 | 기능 | 설명 |
 |---|---|---|
+| **Alt + F** | **File Menu** | File 메뉴 즉시 열기 |
+| **Alt + E** | **Edit Menu** | Edit 메뉴 즉시 열기 |
+| **Alt + S** | **Search Menu** | Search 메뉴 즉시 열기 |
+| **Alt + R** | **Run Menu** | Run 메뉴 즉시 열기 |
+| **Alt + C** | **Compile Menu** | Compile 메뉴 즉시 열기 |
+| **Alt + D** | **Debug Menu** | Debug 메뉴 즉시 열기 |
+| **Alt + O** | **Options Menu** | Options 메뉴 즉시 열기 |
+| **Alt + W** | **Window Menu** | Window 메뉴 즉시 열기 |
+| **Alt + H** | **Help Menu** | Help 메뉴 즉시 열기 |
 | **F1** | Help / About | Turbo Go 정보 및 도움말 대화상자 |
 | **F2** | Save | 현재 버퍼 저장 / 다른 이름으로 저장 |
 | **F3** | Open | 파일 브라우저 다이얼로그 열기 |
@@ -135,7 +148,6 @@ go build -o bin/tg ./cmd/tg
 | **F7** | **Trace Into** | 한 줄씩 실행 (함수 내부 진입) |
 | **F8** | **Step Over** | 한 줄씩 실행 (함수 건너뛰기) |
 | **Ctrl + F2** | **Reset Debugger** | 디버깅 세션 종료 및 실행 포인터 초기화 |
-| **Alt + W** | **Watches Window** | 하단 변수 감시(Watches) 윈도우 토글 |
 | **Ctrl + F** | **Find** | 문자열 검색 다이얼로그 열기 |
 | **Ctrl + L** | **Search Again** | 이전 검색어로 다음 위치 계속 찾기 (Find Next) |
 | **Alt + G** | **Go to Line** | 특정 줄 번호로 커서 이동 (`Ctrl+G`) |
