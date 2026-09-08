@@ -19,9 +19,10 @@
 * Syntax highlighting for Go keywords, types, literals (strings, numbers, runes), built-in functions, and comments
 
 
-* **Compiling Modal Dialog**:
+* **Compiling Modal Dialog & Multi-File Project Support**:
 * Authentic Borland-style "Compiling..." modal dialog displaying target file, total lines, error/warning count, and elapsed build time
-* Displays file name, line number, and error messages on build failures, with **instant jump to the error line in the editor**
+* **Multi-File & Go Module Support**: Automatically detects `go.mod` modules or aggregates all package `.go` files in the directory so multi-file projects compile seamlessly
+* Displays file name, line number, and error messages on build failures, with **instant jump to error line (even across different files)** in the editor
 
 
 * **Alt+F5 User Screen**:
