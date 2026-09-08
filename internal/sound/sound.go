@@ -144,10 +144,26 @@ func play(pathProvider func() string) {
 	path := pathProvider()
 
 	go func() {
-		if runtime.GOOS == "darwin" && path != "" {
-			_ = exec.Command("afplay", path).Run()
-		} else {
-			fmt.Print("\a")
+		switch runtime.GOOS {
+		case "darwin":
+			if path != "" {
+				_ = exec.Command("afplay", path).Run()
+			}
+		case "windows":
+			if path != "" {
+				psCmd := fmt.Sprintf(`(New-Object Media.SoundPlayer '%s').PlaySync()`, path)
+				_ = exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", psCmd).Run()
+			} else {
+				fmt.Print("\a")
+			}
+		default:
+			if path != "" {
+				if err := exec.Command("aplay", "-q", path).Run(); err != nil {
+					_ = exec.Command("paplay", path).Run()
+				}
+			} else {
+				fmt.Print("\a")
+			}
 		}
 	}()
 }

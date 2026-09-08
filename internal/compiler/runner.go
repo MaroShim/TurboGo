@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -41,8 +42,8 @@ type RunResult struct {
 	Completed bool
 }
 
-// Error regex pattern: file.go:line:col: message
-var errRegex = regexp.MustCompile(`(?m)^([^:\n\r]+):(\d+):(\d+):\s*(.+)$`)
+// Error regex pattern: file.go:line:col: message (supports Windows drive letters C:\...)
+var errRegex = regexp.MustCompile(`(?m)^((?:[a-zA-Z]:)?[^:\n\r]+):(\d+):(\d+):\s*(.+)$`)
 
 // CountLines counts total lines of go code in the specified target
 func CountLines(targetPath string) int {
@@ -86,7 +87,7 @@ func Build(targetPath string) *BuildResult {
 	}
 
 	ext := ""
-	if os.PathSeparator == '\\' {
+	if runtime.GOOS == "windows" {
 		ext = ".exe"
 	}
 
@@ -137,7 +138,7 @@ func BuildDebug(targetPath string) *BuildResult {
 	}
 
 	ext := ""
-	if os.PathSeparator == '\\' {
+	if runtime.GOOS == "windows" {
 		ext = ".exe"
 	}
 	tmpBin := filepath.Join(os.TempDir(), fmt.Sprintf("turbogo_dbg_%d%s", time.Now().UnixNano(), ext))
