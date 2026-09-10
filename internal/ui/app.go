@@ -13,6 +13,7 @@ import (
 // DialogHolder interfaces
 type Dialog interface {
 	Draw(screen tcell.Screen, w, h int)
+	IsVisible() bool
 }
 
 // App is the main Turbo Go IDE application controller
@@ -35,7 +36,8 @@ type App struct {
 	saveFileDialog  Dialog
 	aboutDialog     Dialog
 	gotoLineDialog  Dialog
-	findDialog      Dialog
+	findDialog          Dialog
+	searchResultsDialog Dialog
 
 	// Callbacks for modal interaction
 	onAction func(actionID string)
@@ -53,6 +55,8 @@ func NewApp(initialFile string) (*App, error) {
 
 	s.EnableMouse()
 	s.Clear()
+	s.SetCursorStyle(tcell.CursorStyleBlinkingBlock, tcell.ColorYellow)
+	os.Stdout.WriteString("\x1b]12;#FFFF00\x07\x1b[1 q")
 
 	w, h := s.Size()
 
@@ -90,6 +94,10 @@ func (a *App) SetDialogs(
 
 func (a *App) SetFindDialog(findDlg Dialog) {
 	a.findDialog = findDlg
+}
+
+func (a *App) SetSearchResultsDialog(dlg Dialog) {
+	a.searchResultsDialog = dlg
 }
 
 func (a *App) SetActionHandler(handler func(actionID string)) {
@@ -169,6 +177,7 @@ func (a *App) Stop() {
 		a.debugger.Stop()
 	}
 	a.screen.Fini()
+	os.Stdout.WriteString("\x1b]112\x07\x1b[0 q")
 }
 
 func (a *App) GetWatchWindow() *WatchWindow {
@@ -349,13 +358,15 @@ func (a *App) Redraw() {
 	editorInteriorW := winW - 2
 	editorInteriorH := editorH - 2
 
+	editorFocused := !a.menuBar.Active && !a.HasModalVisible()
+
 	a.editor.Draw(
 		a.screen,
 		editorInteriorX,
 		editorInteriorY,
 		editorInteriorW,
 		editorInteriorH,
-		!a.menuBar.Active,
+		editorFocused,
 	)
 
 	// 3. Draw Watch Window if visible
@@ -386,14 +397,34 @@ func (a *App) Redraw() {
 	if a.findDialog != nil {
 		a.findDialog.Draw(a.screen, a.width, a.height)
 	}
+	if a.searchResultsDialog != nil {
+		a.searchResultsDialog.Draw(a.screen, a.width, a.height)
+	}
 
 	// 4. Draw Top MenuBar (row 0)
 	a.menuBar.Draw(a.screen, a.width)
+	if a.menuBar.Active {
+		a.screen.HideCursor()
+	}
 
 	// 5. Draw Bottom StatusBar (row height-1)
 	a.statusBar.Draw(a.screen, a.height-1, a.width)
 
 	a.screen.Show()
+}
+
+// HasModalVisible returns true if any modal dialog is currently open
+func (a *App) HasModalVisible() bool {
+	for _, d := range []Dialog{
+		a.compileDialog, a.errorListDialog, a.openFileDialog,
+		a.saveFileDialog, a.aboutDialog, a.gotoLineDialog,
+		a.findDialog, a.searchResultsDialog,
+	} {
+		if d != nil && d.IsVisible() {
+			return true
+		}
+	}
+	return false
 }
 
 // CompileCurrent compiles current buffer

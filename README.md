@@ -1,4 +1,4 @@
-# Turbo Go (Version 0.89) 🚀
+# Turbo Go (Version 0.89)
 
 > **Retro Borland Turbo Pascal / Turbo C Look & Feel IDE for the Go Language**
 
@@ -6,7 +6,7 @@
 
 ---
 
-## 📸 Key Features
+## Key Features
 
 * **Classic Borland Turbo Vision UI**:
 * Signature Turbo Blue editor canvas (`#0000A8`) with double-line box-drawing characters (`╔═╗`, `║ ║`, `╚═╝`)
@@ -45,7 +45,7 @@
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+## Keyboard Shortcuts
 
 | Shortcut | Function | Description |
 | --- | --- | --- |
@@ -85,7 +85,7 @@
 
 ---
 
-## 🛠️ Build & Run
+## Build & Run
 
 **1. Build and run binary**
 
@@ -95,7 +95,7 @@ go build -o bin/tg ./cmd/tg
 
 ```
 
-# Turbo Go (Version 0.89) 🚀
+# Turbo Go (Version 0.89)
 
 > **Retro Borland Turbo Pascal / Turbo C Look & Feel IDE for the Go Language**
 
@@ -103,7 +103,7 @@ go build -o bin/tg ./cmd/tg
 
 ---
 
-## 📸 주요 특징
+## 주요 특징
 
 - **Classic Borland Turbo Vision UI**:
   - 시그니처 터보 블루 에디터 캔버스 (`#0000A8`) 및 이중선 박스 드로잉 (`╔═╗`, `║ ║`, `╚═╝`)
@@ -129,7 +129,7 @@ go build -o bin/tg ./cmd/tg
 
 ---
 
-## ⌨️ 단축키 안내
+## 단축키 안내
 
 | 단축키 | 기능 | 설명 |
 |---|---|---|
@@ -169,7 +169,7 @@ go build -o bin/tg ./cmd/tg
 
 ---
 
-## 🛠️ 실행 및 빌드 방법
+## 실행 및 빌드 방법
 
 ### 1. 바이너리 빌드 및 실행
 ```bash

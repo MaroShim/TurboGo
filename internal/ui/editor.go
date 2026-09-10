@@ -516,6 +516,7 @@ func (e *Editor) Draw(screen tcell.Screen, x, y, width, height int, focused bool
 	lineNumStyle := tcell.StyleDefault.Background(ColorEditorLineNumBg).Foreground(ColorEditorLineNumFg)
 
 	inBlockComment := false
+	actualCursorScreenX := -1
 
 	for row := 0; row < height; row++ {
 		lineIdx := e.ScrollY + row
@@ -551,6 +552,9 @@ func (e *Editor) Draw(screen tcell.Screen, x, y, width, height int, focused bool
 				} else if hasBP {
 					gutterStyle = lineBaseStyle
 					mark = RuneBreakpoint
+				} else if focused && lineIdx == e.CursorY {
+					gutterStyle = tcell.StyleDefault.Background(ColorEditorLineNumBg).Foreground(tcell.ColorYellow).Bold(true)
+					mark = '▸'
 				} else {
 					gutterStyle = lineNumStyle
 				}
@@ -596,6 +600,13 @@ func (e *Editor) Draw(screen tcell.Screen, x, y, width, height int, focused bool
 				} else if lineIdx == e.HighlightLine && col >= e.HighlightStartCol && col < e.HighlightEndCol {
 					// Classic Borland Search Match Highlight: Crisp Light Cyan block with Black text
 					tokStyle = tcell.StyleDefault.Background(tcell.ColorLightCyan).Foreground(tcell.ColorBlack).Bold(true)
+				} else if focused && lineIdx == e.CursorY && col == e.CursorX && !isIP && !hasBP {
+					// High-contrast cursor cell: Bright Yellow background with Black text
+					tokStyle = tcell.StyleDefault.Background(ColorEditorCursor).Foreground(tcell.ColorBlack).Bold(true)
+				}
+
+				if lineIdx == e.CursorY && col == e.CursorX {
+					actualCursorScreenX = screenX
 				}
 
 				if tok.Char == '\t' {
@@ -610,9 +621,19 @@ func (e *Editor) Draw(screen tcell.Screen, x, y, width, height int, focused bool
 					screenX += runewidth.RuneWidth(tok.Char)
 				}
 			}
+
+			// If cursor is beyond the end of the line text
+			if lineIdx == e.CursorY && actualCursorScreenX < 0 {
+				actualCursorScreenX = screenX + (e.CursorX - len(tokens))
+			}
+
 			// Fill rest of the line with lineBaseStyle (stretches yellow or red bar across full window width)
 			for screenX < x+width {
-				screen.SetContent(screenX, screenY, ' ', nil, lineBaseStyle)
+				cellStyle := lineBaseStyle
+				if focused && lineIdx == e.CursorY && screenX == actualCursorScreenX && !isIP && !hasBP {
+					cellStyle = tcell.StyleDefault.Background(ColorEditorCursor).Foreground(tcell.ColorBlack).Bold(true)
+				}
+				screen.SetContent(screenX, screenY, ' ', nil, cellStyle)
 				screenX++
 			}
 		} else {
@@ -627,6 +648,9 @@ func (e *Editor) Draw(screen tcell.Screen, x, y, width, height int, focused bool
 	// 3. Set terminal hardware cursor if focused
 	if focused {
 		cursorScreenX := x + lineNumWidth + (e.CursorX - e.ScrollX)
+		if actualCursorScreenX >= 0 {
+			cursorScreenX = actualCursorScreenX
+		}
 		cursorScreenY := y + (e.CursorY - e.ScrollY)
 		if cursorScreenX >= x+lineNumWidth && cursorScreenX < x+width &&
 			cursorScreenY >= y && cursorScreenY < y+height {
@@ -634,6 +658,8 @@ func (e *Editor) Draw(screen tcell.Screen, x, y, width, height int, focused bool
 		} else {
 			screen.HideCursor()
 		}
+	} else {
+		screen.HideCursor()
 	}
 }
 
@@ -755,6 +781,56 @@ func (e *Editor) FindNext(query string, caseSensitive bool) bool {
 // ClearHighlight removes any active search match highlight
 func (e *Editor) ClearHighlight() {
 	e.HighlightLine = -1
+}
+
+// GetWordUnderCursor returns the identifier word currently under the editor cursor
+func (e *Editor) GetWordUnderCursor() string {
+	if e.CursorY < 0 || e.CursorY >= len(e.Lines) {
+		return ""
+	}
+	line := e.Lines[e.CursorY]
+	runes := []rune(line)
+	if len(runes) == 0 {
+		return ""
+	}
+
+	col := e.CursorX
+	if col >= len(runes) {
+		col = len(runes) - 1
+	}
+	if col < 0 {
+		col = 0
+	}
+
+	isWordChar := func(r rune) bool {
+		return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_'
+	}
+
+	// If cursor is not on a word char, check if preceding char is
+	if !isWordChar(runes[col]) {
+		if col > 0 && isWordChar(runes[col-1]) {
+			col--
+		} else {
+			return ""
+		}
+	}
+
+	// Find start of word
+	start := col
+	for start > 0 && isWordChar(runes[start-1]) {
+		start--
+	}
+
+	// Find end of word
+	end := col
+	for end < len(runes) && isWordChar(runes[end]) {
+		end++
+	}
+
+	if start < end {
+		return string(runes[start:end])
+	}
+	return ""
 }
 
 // ClearSelection cancels any active block selection
