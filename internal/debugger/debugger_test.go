@@ -290,6 +290,60 @@ func TestF7ContinuousTracing(t *testing.T) {
 	}
 }
 
+func TestMultiFileBreakpointsDelve(t *testing.T) {
+	calcMain, err := filepath.Abs("../../examples/calc/main.go")
+	if err != nil {
+		t.Fatalf("failed to resolve calc main path: %v", err)
+	}
+	calcMath := filepath.Join(filepath.Dir(calcMain), "math.go")
+	calcStats := filepath.Join(filepath.Dir(calcMain), "stats.go")
+
+	bRes := compiler.BuildDebug(calcMain)
+	if !bRes.Success {
+		t.Fatalf("build failed: %s", bRes.RawOutput)
+	}
+	defer os.Remove(bRes.BinaryPath)
+
+	dbg := NewDebugger()
+	// Breakpoint in math.go:5 (Factorial)
+	dbg.SetBreakpoint(calcMath, 5)
+	// Breakpoint in main.go:14
+	dbg.SetBreakpoint(calcMain, 14)
+	// Breakpoint in stats.go:7 (Average)
+	dbg.SetBreakpoint(calcStats, 7)
+
+	err = dbg.StartSession(bRes.BinaryPath, filepath.Dir(calcMain), calcMain)
+	if err != nil {
+		t.Fatalf("failed to start debug: %v", err)
+	}
+	defer dbg.Stop()
+
+	// 1. First stop should be at math.go:5 inside Factorial()
+	st1 := dbg.GetState()
+	if !st1.Active || st1.CurrentLine != 5 || filepath.Base(st1.CurrentFile) != "math.go" {
+		t.Fatalf("expected first break at math.go:5, got %s:%d (func=%s)", st1.CurrentFile, st1.CurrentLine, st1.CurrentFunc)
+	}
+
+	// 2. Continue to second breakpoint: main.go:14
+	if err := dbg.Continue(); err != nil {
+		t.Fatalf("continue to main.go failed: %v", err)
+	}
+	st2 := dbg.GetState()
+	if !st2.Active || st2.CurrentLine != 14 || filepath.Base(st2.CurrentFile) != "main.go" {
+		t.Fatalf("expected second break at main.go:14, got %s:%d (func=%s)", st2.CurrentFile, st2.CurrentLine, st2.CurrentFunc)
+	}
+
+	// 3. Continue to third breakpoint: stats.go:7 inside Average()
+	if err := dbg.Continue(); err != nil {
+		t.Fatalf("continue to stats.go failed: %v", err)
+	}
+	st3 := dbg.GetState()
+	if !st3.Active || st3.CurrentLine != 7 || filepath.Base(st3.CurrentFile) != "stats.go" {
+		t.Fatalf("expected third break at stats.go:7, got %s:%d (func=%s)", st3.CurrentFile, st3.CurrentLine, st3.CurrentFunc)
+	}
+}
+
+
 
 
 

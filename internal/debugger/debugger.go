@@ -162,13 +162,34 @@ func NewDebugger() *Debugger {
 }
 
 func (d *Debugger) findDelveSourceLocked(fileName string) string {
-	base := filepath.Base(fileName)
+	clean := filepath.Clean(fileName)
+	base := filepath.Base(clean)
+
+	// 1. Exact match with a Delve source
 	for _, s := range d.dlvSources {
-		if filepath.Base(s) == base {
+		if filepath.Clean(s) == clean {
 			return s
 		}
 	}
-	return fileName
+
+	// 2. Suffix match among user files (never match runtime/stdlib)
+	for _, s := range d.dlvSources {
+		if d.isUserFile(s) {
+			sClean := filepath.Clean(s)
+			if strings.HasSuffix(sClean, clean) || strings.HasSuffix(clean, sClean) {
+				return s
+			}
+		}
+	}
+
+	// 3. Base name match among user files (never match runtime/stdlib)
+	for _, s := range d.dlvSources {
+		if d.isUserFile(s) && filepath.Base(s) == base {
+			return s
+		}
+	}
+
+	return clean
 }
 
 // findFreePort finds an available TCP port

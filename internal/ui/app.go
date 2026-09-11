@@ -46,6 +46,22 @@ type App struct {
 	onAction func(actionID string)
 }
 
+func NewAppWithScreen(s tcell.Screen, initialFile string) *App {
+	w, h := s.Size()
+	return &App{
+		screen:      s,
+		running:     true,
+		width:       w,
+		height:      h,
+		menuBar:     NewMenuBar(),
+		statusBar:   NewStatusBar(),
+		userScreen:  NewUserScreen(),
+		editor:      NewEditor(initialFile, 1),
+		debugger:    debugger.NewDebugger(),
+		watchWindow: NewWatchWindow(2),
+	}
+}
+
 func NewApp(initialFile string) (*App, error) {
 	s, err := tcell.NewScreen()
 	if err != nil {
@@ -59,20 +75,7 @@ func NewApp(initialFile string) (*App, error) {
 	s.EnableMouse()
 	s.Clear()
 
-	w, h := s.Size()
-
-	app := &App{
-		screen:     s,
-		running:    true,
-		width:      w,
-		height:     h,
-		menuBar:    NewMenuBar(),
-		statusBar:  NewStatusBar(),
-		userScreen: NewUserScreen(),
-		editor:     NewEditor(initialFile, 1),
-		debugger:   debugger.NewDebugger(),
-		watchWindow: NewWatchWindow(2),
-	}
+	app := NewAppWithScreen(s, initialFile)
 
 	// Initialize LSP Client in background so it doesn't block UI startup
 	workDir := "."
@@ -217,7 +220,37 @@ func (a *App) GetWatchWindow() *WatchWindow {
 func (a *App) SyncDebuggerState() {
 	st := a.debugger.GetState()
 	a.watchWindow.SetState(st)
-	if st.CurrentLine > 0 {
+	if st.CurrentLine > 0 && !st.Exited {
+		targetFile := st.CurrentFile
+		if targetFile != "" {
+			resolved := targetFile
+			if !filepath.IsAbs(resolved) {
+				if a.editor.FilePath != "" {
+					cand := filepath.Join(filepath.Dir(a.editor.FilePath), targetFile)
+					if _, err := os.Stat(cand); err == nil {
+						resolved = cand
+					}
+				}
+				if !filepath.IsAbs(resolved) {
+					if cwd, err := os.Getwd(); err == nil {
+						cand := filepath.Join(cwd, targetFile)
+						if _, err := os.Stat(cand); err == nil {
+							resolved = cand
+						}
+					}
+				}
+			}
+			if absResolved, err := filepath.Abs(resolved); err == nil {
+				resolved = absResolved
+			}
+			if fi, err := os.Stat(resolved); err == nil && fi.Mode().IsRegular() {
+				cleanTarget := filepath.Clean(resolved)
+				cleanCurrent := filepath.Clean(a.editor.FilePath)
+				if cleanTarget != cleanCurrent {
+					_ = a.editor.LoadFile(cleanTarget)
+				}
+			}
+		}
 		a.editor.SetCurrentIP(st.CurrentLine)
 	} else {
 		a.editor.SetCurrentIP(0)
@@ -268,9 +301,42 @@ func (a *App) StartDebugging() (*compiler.BuildResult, error) {
 	absTarget, _ := filepath.Abs(targetFile)
 	workDir := filepath.Dir(absTarget)
 
-	// Clear and synchronize editor breakpoints into debugger with absolute path
+	// 1. Sync current active editor file breakpoints into FileBreakpoints
+	if a.editor.FilePath != "" {
+		curKey := filepath.Clean(a.editor.FilePath)
+		if len(a.editor.Breakpoints) > 0 {
+			saved := make(map[int]bool)
+			for k, v := range a.editor.Breakpoints {
+				if v {
+					saved[k] = true
+				}
+			}
+			if a.editor.FileBreakpoints == nil {
+				a.editor.FileBreakpoints = make(map[string]map[int]bool)
+			}
+			a.editor.FileBreakpoints[curKey] = saved
+		} else if a.editor.FileBreakpoints != nil {
+			delete(a.editor.FileBreakpoints, curKey)
+		}
+	}
+
+	// 2. Clear and synchronize all editor breakpoints across ALL files into debugger
 	a.debugger.ClearBreakpoints()
 	hasAnyBP := false
+	if a.editor.FileBreakpoints != nil {
+		for f, lines := range a.editor.FileBreakpoints {
+			absF, err := filepath.Abs(f)
+			if err != nil {
+				absF = f
+			}
+			for l, set := range lines {
+				if set {
+					a.debugger.SetBreakpoint(absF, l)
+					hasAnyBP = true
+				}
+			}
+		}
+	}
 	for l, set := range a.editor.Breakpoints {
 		if set {
 			a.debugger.SetBreakpoint(absTarget, l)
@@ -278,7 +344,7 @@ func (a *App) StartDebugging() (*compiler.BuildResult, error) {
 		}
 	}
 
-	// If no breakpoints set, auto-break at current cursor line or line 1
+	// 3. If no breakpoints set anywhere, auto-break at current cursor line or line 1
 	if !hasAnyBP {
 		curLine := a.editor.CursorY + 1
 		if curLine < 1 {
