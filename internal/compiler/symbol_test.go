@@ -70,3 +70,70 @@ type MyStruct struct {
 		t.Errorf("expected at least 2 matches for Add, got %d", len(matches))
 	}
 }
+
+func TestFindDefinitionEdgeCases(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "tg_test_edge_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	file := filepath.Join(tempDir, "service.go")
+	code := `package main
+
+// func FakeFunc() should not be matched as real definition
+var comment = "// func FakeFunc() string"
+
+type Worker interface {
+	DoWork() error
+}
+
+func (s *MyStruct) Compute(val int) int {
+	return val * 2
+}
+
+const MaxLimit = 100
+var GlobalCounter = 0
+`
+	if err := os.WriteFile(file, []byte(code), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// 1. Method receiver definition
+	f, line, _, ok := FindDefinitionInProject(file, "Compute")
+	if !ok || line != 10 {
+		t.Errorf("expected Compute method at line 10, got %s:%d (ok=%v)", f, line, ok)
+	}
+
+	// 2. Interface definition
+	_, line, _, ok = FindDefinitionInProject(file, "Worker")
+	if !ok || line != 6 {
+		t.Errorf("expected Worker interface at line 6, got line %d", line)
+	}
+
+	// 3. Const & Var definition
+	_, line, _, ok = FindDefinitionInProject(file, "MaxLimit")
+	if !ok || line != 14 {
+		t.Errorf("expected MaxLimit at line 14, got line %d", line)
+	}
+	_, line, _, ok = FindDefinitionInProject(file, "GlobalCounter")
+	if !ok || line != 15 {
+		t.Errorf("expected GlobalCounter at line 15, got line %d", line)
+	}
+
+	// 4. Commented function should not be matched
+	_, _, _, ok = FindDefinitionInProject(file, "FakeFunc")
+	if ok {
+		t.Errorf("FakeFunc inside comment should not be found as a definition")
+	}
+
+	// 5. Empty/blank search
+	_, _, _, ok = FindDefinitionInProject(file, "   ")
+	if ok {
+		t.Errorf("blank symbol should return false")
+	}
+	emptyMatches := SearchInProject(file, "", false)
+	if len(emptyMatches) != 0 {
+		t.Errorf("empty query search should return empty matches")
+	}
+}
