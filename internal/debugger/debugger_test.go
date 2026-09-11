@@ -235,5 +235,61 @@ func TestDynamicBreakpointDuringSession(t *testing.T) {
 	}
 }
 
+func TestF7ContinuousTracing(t *testing.T) {
+	fibPath, err := filepath.Abs("../../examples/fibonacci/main.go")
+	if err != nil {
+		t.Fatalf("failed to resolve path: %v", err)
+	}
+
+	bRes := compiler.BuildDebug(fibPath)
+	if !bRes.Success {
+		t.Fatalf("build failed: %s", bRes.RawOutput)
+	}
+	defer os.Remove(bRes.BinaryPath)
+
+	dbg := NewDebugger()
+	// Breakpoints on 12 and 23
+	dbg.SetBreakpoint(fibPath, 12)
+	dbg.SetBreakpoint(fibPath, 23)
+
+	err = dbg.StartSession(bRes.BinaryPath, filepath.Dir(fibPath), fibPath)
+	if err != nil {
+		t.Fatalf("failed to start debug: %v", err)
+	}
+	defer dbg.Stop()
+
+	hitLine12 := false
+	hitLine23Count := 0
+
+	for step := 0; step < 40; step++ {
+		st := dbg.GetState()
+		if st.Exited {
+			break
+		}
+		// Must always stay within user project file, never leak to stdlib or runtime
+		if filepath.Base(st.CurrentFile) != "main.go" {
+			t.Errorf("step %d leaked to non-user file: %s (func=%s)", step, st.CurrentFile, st.CurrentFunc)
+		}
+		if st.CurrentLine == 12 {
+			hitLine12 = true
+		}
+		if st.CurrentLine == 23 {
+			hitLine23Count++
+		}
+		err = dbg.Step()
+		if err != nil {
+			t.Fatalf("Step error at step %d: %v", step, err)
+		}
+	}
+
+	if !hitLine12 {
+		t.Errorf("expected line 12 in Fibonacci to be traced into by F7")
+	}
+	if hitLine23Count < 3 {
+		t.Errorf("expected line 23 in main to be hit multiple times during loop tracing, got %d", hitLine23Count)
+	}
+}
+
+
 
 

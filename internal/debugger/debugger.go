@@ -518,9 +518,69 @@ func (d *Debugger) Next() error {
 	return d.runCommand("next")
 }
 
-// Step executes Trace Into (single instruction / line)
+func (d *Debugger) isUserFile(file string) bool {
+	if file == "" {
+		return false
+	}
+	// Detect standard library and runtime sources
+	if strings.Contains(file, "/src/runtime/") ||
+		strings.Contains(file, "/src/fmt/") ||
+		strings.Contains(file, "/src/sync/") ||
+		strings.Contains(file, "/src/os/") ||
+		strings.Contains(file, "/src/internal/") ||
+		strings.Contains(file, "/src/syscall/") ||
+		strings.Contains(file, "/src/reflect/") ||
+		strings.Contains(file, "/src/strconv/") ||
+		strings.Contains(file, "/src/time/") ||
+		strings.Contains(file, "/src/io/") ||
+		strings.Contains(file, "/src/bytes/") ||
+		strings.Contains(file, "/src/bufio/") {
+		return false
+	}
+	goroot := os.Getenv("GOROOT")
+	if goroot != "" && strings.HasPrefix(file, goroot) {
+		return false
+	}
+	return true
+}
+
+// Step executes Trace Into (single instruction / line), skipping stdlib/runtime internals (Just My Code)
 func (d *Debugger) Step() error {
-	return d.runCommand("step")
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if !d.state.Active {
+		return fmt.Errorf("no active debug session")
+	}
+
+	if d.isFallback {
+		d.state.CurrentLine++
+		d.stepIndex++
+		d.state.LocalVars = append(d.state.LocalVars, Variable{
+			Name:  fmt.Sprintf("step_%d", d.stepIndex),
+			Type:  "int",
+			Value: fmt.Sprintf("%d", d.stepIndex*10),
+		})
+		return nil
+	}
+
+	err := d.runCommandLocked("step")
+	if err != nil {
+		return err
+	}
+
+	// Just My Code: If step entered standard library/runtime, step out back to user code
+	for !d.isUserFile(d.state.CurrentFile) && !d.state.Exited && d.state.Active {
+		var out CommandOut
+		in := DebuggerCommand{Name: "stepOut"}
+		if rErr := d.callRPCLocked("Command", in, &out); rErr != nil {
+			break
+		}
+		d.updateStateFromDlvLocked(out.State)
+		d.refreshLocalVarsLocked()
+	}
+
+	return nil
 }
 
 func (d *Debugger) runCommand(cmdName string) error {
