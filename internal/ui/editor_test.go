@@ -695,5 +695,97 @@ func TestUndoRedo(t *testing.T) {
 	}
 }
 
+// TestF12NavigationAndUndoRegression tests the multi-file jump, editing, and round-trip stack integrity
+func TestF12NavigationAndUndoRegression(t *testing.T) {
+	tmpDir := t.TempDir()
+	fileA := filepath.Join(tmpDir, "main.go")
+	fileB := filepath.Join(tmpDir, "math.go")
+
+	codeA := "package main\n\nfunc main() {\n\tCalculate()\n}\n"
+	codeB := "package main\n\nfunc Calculate() int {\n\treturn 42\n}\n"
+
+	if err := os.WriteFile(fileA, []byte(codeA), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(fileB, []byte(codeB), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	ed := NewEditor("", 1)
+	if err := ed.LoadFile(fileA); err != nil {
+		t.Fatal(err)
+	}
+
+	// 1. Move cursor to 'Calculate()' on line 4 (index 3)
+	ed.CursorY = 3
+	ed.CursorX = 2
+
+	// 2. Perform edit on File A: insert a comment
+	ed.InsertRune('/')
+	ed.InsertRune('/')
+	if !ed.Dirty {
+		t.Errorf("expected ed.Dirty to be true after edit on File A")
+	}
+
+	// 3. Trigger F12: Push current location and jump to File B
+	ed.PushNavLocation()
+	if err := ed.LoadFile(fileB); err != nil {
+		t.Fatal(err)
+	}
+	ed.GotoLine(3, 1) // Jumped to Calculate() definition
+
+	if ed.FilePath != fileB || ed.CursorY != 2 {
+		t.Fatalf("expected jump to %s line 3, got %s line %d", fileB, ed.FilePath, ed.CursorY+1)
+	}
+
+	// 4. Perform second jump within File B to return statement (line 4)
+	ed.PushNavLocation()
+	ed.GotoLine(4, 2)
+
+	// 5. Perform edit in File B: insert "// ok"
+	for _, r := range "// ok" {
+		ed.InsertRune(r)
+	}
+	// Undo in File B
+	for i := 0; i < 5; i++ {
+		if !ed.Undo() {
+			t.Fatalf("expected Undo in File B to succeed")
+		}
+	}
+
+	// 6. Navigate Back 1: should return to line 3 in File B
+	if !ed.NavigateBack() {
+		t.Fatalf("expected NavigateBack to step 1 to succeed")
+	}
+	if ed.FilePath != fileB || ed.CursorY != 2 {
+		t.Errorf("expected File B line 3, got %s line %d", ed.FilePath, ed.CursorY+1)
+	}
+
+	// 7. Navigate Back 2: should return to File A at line 4 (with previous edit preserved)
+	if !ed.NavigateBack() {
+		t.Fatalf("expected NavigateBack to File A to succeed")
+	}
+	if ed.FilePath != fileA || ed.CursorY != 3 {
+		t.Errorf("expected File A line 4, got %s line %d", ed.FilePath, ed.CursorY+1)
+	}
+
+	// 8. Undo edit on File A: undo the two '/'
+	if !ed.Undo() || !ed.Undo() {
+		t.Fatalf("expected Undo in File A to succeed")
+	}
+	if ed.Lines[3] != "    Calculate()" {
+		t.Errorf("expected line 4 restored to '    Calculate()', got %q", ed.Lines[3])
+	}
+
+	// 9. Navigate Forward: should move back into File B
+	if !ed.NavigateForward() {
+		t.Fatalf("expected NavigateForward into File B to succeed")
+	}
+	if ed.FilePath != fileB || ed.CursorY != 2 {
+		t.Errorf("expected Forward into File B line 3, got %s line %d", ed.FilePath, ed.CursorY+1)
+	}
+}
+
+
 
 
