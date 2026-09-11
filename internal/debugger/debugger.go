@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -139,14 +140,15 @@ type DebugState struct {
 
 // Debugger manages a real Delve session or fallback
 type Debugger struct {
-	mu          sync.Mutex
-	dlvCmd      *exec.Cmd
-	rpcPort     int
-	breakpoints map[string]map[int]bool // file -> lines
-	state       DebugState
-	activeBin   string
-	isFallback  bool
-	stepIndex   int
+	mu                 sync.Mutex
+	dlvCmd             *exec.Cmd
+	rpcPort            int
+	breakpoints        map[string]map[int]bool // file -> lines
+	state              DebugState
+	activeBin          string
+	isFallback         bool
+	stepIndex          int
+	currentGoroutineID int
 }
 
 func NewDebugger() *Debugger {
@@ -184,6 +186,29 @@ func FindDelve() (string, error) {
 		return cand, nil
 	}
 	return "", fmt.Errorf("dlv not found in PATH or GOPATH/bin")
+}
+
+// SetBreakpoint explicitly adds a breakpoint at file:line
+func (d *Debugger) SetBreakpoint(file string, line int) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	clean := filepath.Clean(file)
+	if _, ok := d.breakpoints[clean]; !ok {
+		d.breakpoints[clean] = make(map[int]bool)
+	}
+	d.breakpoints[clean][line] = true
+}
+
+// RemoveBreakpoint explicitly removes a breakpoint at file:line
+func (d *Debugger) RemoveBreakpoint(file string, line int) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	clean := filepath.Clean(file)
+	if lines, ok := d.breakpoints[clean]; ok {
+		delete(lines, line)
+	}
 }
 
 // ToggleBreakpoint toggles a breakpoint at file:line
@@ -504,6 +529,7 @@ func (d *Debugger) continueFallbackLocked() error {
 
 func (d *Debugger) updateStateFromDlvLocked(st DlvDebuggerState) {
 	if st.Exited {
+		d.currentGoroutineID = 0
 		d.state.Exited = true
 		d.state.ExitCode = st.ExitStatus
 		d.state.CurrentLine = 0
@@ -513,14 +539,18 @@ func (d *Debugger) updateStateFromDlvLocked(st DlvDebuggerState) {
 		return
 	}
 
-	if st.CurrentGoroutine != nil && st.CurrentGoroutine.CurrentLoc.Line > 0 {
-		loc := st.CurrentGoroutine.CurrentLoc
-		d.state.CurrentFile = loc.File
-		d.state.CurrentLine = loc.Line
-		if loc.Function != nil {
-			d.state.CurrentFunc = loc.Function.Name
+	if st.CurrentGoroutine != nil {
+		d.currentGoroutineID = st.CurrentGoroutine.ID
+		if st.CurrentGoroutine.CurrentLoc.Line > 0 {
+			loc := st.CurrentGoroutine.CurrentLoc
+			d.state.CurrentFile = loc.File
+			d.state.CurrentLine = loc.Line
+			if loc.Function != nil {
+				d.state.CurrentFunc = loc.Function.Name
+			}
 		}
 	} else if st.CurrentThread != nil && st.CurrentThread.Line > 0 {
+		d.currentGoroutineID = -1
 		d.state.CurrentFile = st.CurrentThread.File
 		d.state.CurrentLine = st.CurrentThread.Line
 		if st.CurrentThread.Function != nil {
@@ -534,7 +564,11 @@ func (d *Debugger) refreshLocalVarsLocked() {
 		return
 	}
 
-	scope := EvalScope{GoroutineID: -1, Frame: 0}
+	goroutineID := d.currentGoroutineID
+	if goroutineID <= 0 {
+		goroutineID = -1
+	}
+	scope := EvalScope{GoroutineID: goroutineID, Frame: 0}
 	cfg := LoadConfig{
 		FollowPointers:     true,
 		MaxVariableRecurse: 1,
@@ -549,6 +583,9 @@ func (d *Debugger) refreshLocalVarsLocked() {
 	var argsOut ListFunctionArgsOut
 	if err := d.callRPCLocked("ListFunctionArgs", ListFunctionArgsIn{Scope: scope, Cfg: cfg}, &argsOut); err == nil {
 		for _, v := range argsOut.Args {
+			if strings.HasPrefix(v.Name, "~") {
+				continue // Skip internal compiler return parameters (e.g. ~r0)
+			}
 			val := v.Value
 			if len(val) > 50 {
 				val = val[:47] + "..."
@@ -565,6 +602,9 @@ func (d *Debugger) refreshLocalVarsLocked() {
 	var localsOut ListLocalVarsOut
 	if err := d.callRPCLocked("ListLocalVars", ListLocalVarsIn{Scope: scope, Cfg: cfg}, &localsOut); err == nil {
 		for _, v := range localsOut.Variables {
+			if strings.HasPrefix(v.Name, "~") {
+				continue // Skip internal compiler temporary variables
+			}
 			val := v.Value
 			if len(val) > 50 {
 				val = val[:47] + "..."

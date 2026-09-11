@@ -3,6 +3,7 @@ package debugger
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"tg/internal/compiler"
@@ -84,3 +85,64 @@ func main() {
 		t.Errorf("expected debugger to be inactive after stop")
 	}
 }
+
+func TestFibonacciDebug(t *testing.T) {
+	fibPath, err := filepath.Abs("../../examples/fibonacci/main.go")
+	if err != nil {
+		t.Fatalf("failed to resolve path: %v", err)
+	}
+
+	bRes := compiler.BuildDebug(fibPath)
+	if !bRes.Success {
+		t.Fatalf("build failed: %s", bRes.RawOutput)
+	}
+	defer os.Remove(bRes.BinaryPath)
+
+	dbg := NewDebugger()
+	// Break at line 6: func Fibonacci(n int) uint64 {
+	dbg.ToggleBreakpoint(fibPath, 6)
+
+	err = dbg.StartSession(bRes.BinaryPath, filepath.Dir(fibPath), fibPath)
+	if err != nil {
+		t.Fatalf("failed to start debug: %v", err)
+	}
+	defer dbg.Stop()
+
+	st := dbg.GetState()
+	if !st.Active || st.CurrentLine != 6 || st.CurrentFunc != "main.Fibonacci" {
+		t.Fatalf("expected break at line 6 in main.Fibonacci, got line %d in %s (active=%v)", st.CurrentLine, st.CurrentFunc, st.Active)
+	}
+
+	foundN := false
+	for _, v := range st.LocalVars {
+		if v.Name == "n" {
+			foundN = true
+		}
+		if strings.HasPrefix(v.Name, "~") {
+			t.Errorf("compiler internal variable %q should be filtered out from watch list", v.Name)
+		}
+	}
+	if !foundN {
+		t.Errorf("expected argument 'n' to be present in LocalVars at line 6")
+	}
+
+	// Step to line 7: if n <= 1 {
+	err = dbg.Next()
+	if err != nil {
+		t.Fatalf("next failed: %v", err)
+	}
+	stLine7 := dbg.GetState()
+	if stLine7.CurrentLine != 7 {
+		t.Errorf("expected line 7 after Next, got %d", stLine7.CurrentLine)
+	}
+	foundN7 := false
+	for _, v := range stLine7.LocalVars {
+		if v.Name == "n" {
+			foundN7 = true
+		}
+	}
+	if !foundN7 {
+		t.Errorf("expected argument 'n' to be present in LocalVars at line 7")
+	}
+}
+

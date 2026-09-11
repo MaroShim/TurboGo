@@ -268,11 +268,14 @@ func (a *App) StartDebugging() (*compiler.BuildResult, error) {
 	absTarget, _ := filepath.Abs(targetFile)
 	workDir := filepath.Dir(absTarget)
 
-	// Register editor breakpoints into debugger with absolute path
+	// Clear and synchronize editor breakpoints into debugger with absolute path
+	a.debugger.ClearBreakpoints()
 	hasAnyBP := false
-	for l := range a.editor.Breakpoints {
-		a.debugger.ToggleBreakpoint(absTarget, l)
-		hasAnyBP = true
+	for l, set := range a.editor.Breakpoints {
+		if set {
+			a.debugger.SetBreakpoint(absTarget, l)
+			hasAnyBP = true
+		}
 	}
 
 	// If no breakpoints set, auto-break at current cursor line or line 1
@@ -281,7 +284,7 @@ func (a *App) StartDebugging() (*compiler.BuildResult, error) {
 		if curLine < 1 {
 			curLine = 1
 		}
-		a.debugger.ToggleBreakpoint(absTarget, curLine)
+		a.debugger.SetBreakpoint(absTarget, curLine)
 		a.editor.ToggleBreakpoint(curLine)
 	}
 
@@ -294,6 +297,21 @@ func (a *App) StartDebugging() (*compiler.BuildResult, error) {
 	a.SyncDebuggerState()
 
 	return bRes, nil
+}
+
+// ToggleBreakpoint toggles breakpoint in editor and synchronizes with debugger
+func (a *App) ToggleBreakpoint(line int) bool {
+	isSet := a.editor.ToggleBreakpoint(line)
+	targetFile := a.editor.FilePath
+	if targetFile != "" {
+		absTarget, _ := filepath.Abs(targetFile)
+		if isSet {
+			a.debugger.SetBreakpoint(absTarget, line)
+		} else {
+			a.debugger.RemoveBreakpoint(absTarget, line)
+		}
+	}
+	return isSet
 }
 
 func (a *App) DebugContinue() error {

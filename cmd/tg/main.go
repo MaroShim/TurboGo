@@ -187,7 +187,7 @@ func main() {
 			watch.Visible = !watch.Visible
 		case "debug_toggle_bp":
 			currLine := editor.CursorY + 1
-			editor.ToggleBreakpoint(currLine)
+			app.ToggleBreakpoint(currLine)
 			sound.PlayBell()
 		case "options_toggle_linenums":
 			editor.ToggleLineNumbers()
