@@ -685,6 +685,7 @@ func (d *Debugger) continueFallbackLocked() error {
 func (d *Debugger) updateStateFromDlvLocked(st DlvDebuggerState) {
 	if st.Exited {
 		d.currentGoroutineID = 0
+		d.state.Active = false
 		d.state.Exited = true
 		d.state.ExitCode = st.ExitStatus
 		d.state.CurrentLine = 0
@@ -827,5 +828,5 @@ func (d *Debugger) GetState() DebugState {
 func (d *Debugger) IsActive() bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	return d.state.Active
+	return d.state.Active && !d.state.Exited
 }
