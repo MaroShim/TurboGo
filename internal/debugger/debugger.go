@@ -148,8 +148,6 @@ type Debugger struct {
 	dlvSources         []string                // cached Delve source list
 	state              DebugState
 	activeBin          string
-	isFallback         bool
-	stepIndex          int
 	currentGoroutineID int
 }
 
@@ -219,7 +217,7 @@ func FindDelve() (string, error) {
 	if _, err := os.Stat(cand); err == nil {
 		return cand, nil
 	}
-	return "", fmt.Errorf("dlv not found in PATH or GOPATH/bin")
+	return "", fmt.Errorf("delve (dlv) not found in PATH or GOPATH/bin. Please run: go install github.com/go-delve/delve/cmd/dlv@latest")
 }
 
 // SetBreakpoint explicitly adds a breakpoint at file:line
@@ -234,7 +232,7 @@ func (d *Debugger) SetBreakpoint(file string, line int) {
 	d.breakpoints[clean][line] = true
 
 	// If an active Delve session is running, dynamically create breakpoint in Delve
-	if d.state.Active && !d.isFallback {
+	if d.state.Active {
 		delvePath := d.findDelveSourceLocked(file)
 		var out CreateBreakpointOut
 		in := CreateBreakpointIn{Breakpoint: DlvBreakpoint{File: delvePath, Line: line}}
@@ -277,7 +275,7 @@ func (d *Debugger) RemoveBreakpoint(file string, line int) {
 	}
 
 	// If an active Delve session is running, dynamically remove breakpoint from Delve
-	if d.state.Active && !d.isFallback && d.dlvBpIDs != nil {
+	if d.state.Active && d.dlvBpIDs != nil {
 		if lines, ok := d.dlvBpIDs[clean]; ok {
 			if bpID, found := lines[line]; found && bpID > 0 {
 				type ClearBreakpointIn struct {
@@ -348,7 +346,7 @@ func (d *Debugger) ClearBreakpoints() {
 	defer d.mu.Unlock()
 
 	// If active Delve session, clear in Delve
-	if d.state.Active && !d.isFallback && d.dlvBpIDs != nil {
+	if d.state.Active && d.dlvBpIDs != nil {
 		type ClearBreakpointIn struct {
 			Id int `json:"Id"`
 		}
@@ -370,10 +368,7 @@ func (d *Debugger) ClearBreakpoints() {
 func (d *Debugger) StartSession(binaryPath string, workDir string, currentFile string) error {
 	dlvPath, err := FindDelve()
 	if err != nil {
-		d.mu.Lock()
-		d.startFallbackLocked(currentFile)
-		d.mu.Unlock()
-		return nil
+		return err
 	}
 
 	port, pErr := findFreePort()
@@ -386,7 +381,6 @@ func (d *Debugger) StartSession(binaryPath string, workDir string, currentFile s
 
 	d.stopSessionLocked()
 	d.activeBin = binaryPath
-	d.isFallback = false
 
 	d.dlvCmd = exec.Command(
 		dlvPath,
@@ -402,9 +396,7 @@ func (d *Debugger) StartSession(binaryPath string, workDir string, currentFile s
 	}
 
 	if err := d.dlvCmd.Start(); err != nil {
-		// Fallback if dlv fails to start
-		d.startFallbackLocked(currentFile)
-		return nil
+		return fmt.Errorf("failed to start delve: %w", err)
 	}
 
 	// Wait for port to become available
@@ -423,8 +415,7 @@ func (d *Debugger) StartSession(binaryPath string, workDir string, currentFile s
 		_ = d.dlvCmd.Process.Kill()
 		_ = d.dlvCmd.Wait()
 		d.dlvCmd = nil
-		d.startFallbackLocked(currentFile)
-		return nil
+		return fmt.Errorf("delve failed to initialize on port %d", d.rpcPort)
 	}
 
 	d.state = DebugState{
@@ -482,53 +473,6 @@ func (d *Debugger) StartSession(binaryPath string, workDir string, currentFile s
 	return nil
 }
 
-func (d *Debugger) startFallbackLocked(currentFile string) {
-	d.isFallback = true
-
-	targetLine := 1
-	cleanFile := filepath.Clean(currentFile)
-	if bpList, ok := d.breakpoints[cleanFile]; ok && len(bpList) > 0 {
-		minL := 999999
-		for l, set := range bpList {
-			if set && l < minL {
-				minL = l
-			}
-		}
-		if minL != 999999 {
-			targetLine = minL
-		}
-	} else {
-		baseName := filepath.Base(currentFile)
-		for f, lines := range d.breakpoints {
-			if filepath.Base(f) == baseName {
-				minL := 999999
-				for l, set := range lines {
-					if set && l < minL {
-						minL = l
-					}
-				}
-				if minL != 999999 {
-					targetLine = minL
-					break
-				}
-			}
-		}
-	}
-
-	d.state = DebugState{
-		Active:      true,
-		Running:     false,
-		Exited:      false,
-		CurrentFile: currentFile,
-		CurrentLine: targetLine,
-		CurrentFunc: "main",
-		LocalVars: []Variable{
-			{Name: "args", Type: "[]string", Value: "os.Args"},
-			{Name: "status", Type: "int", Value: "0"},
-		},
-	}
-}
-
 // Continue resumes execution until next breakpoint or exit
 func (d *Debugger) Continue() error {
 	return d.runCommand("continue")
@@ -574,17 +518,6 @@ func (d *Debugger) Step() error {
 		return fmt.Errorf("no active debug session")
 	}
 
-	if d.isFallback {
-		d.state.CurrentLine++
-		d.stepIndex++
-		d.state.LocalVars = append(d.state.LocalVars, Variable{
-			Name:  fmt.Sprintf("step_%d", d.stepIndex),
-			Type:  "int",
-			Value: fmt.Sprintf("%d", d.stepIndex*10),
-		})
-		return nil
-	}
-
 	err := d.runCommandLocked("step")
 	if err != nil {
 		return err
@@ -615,21 +548,6 @@ func (d *Debugger) runCommandLocked(cmdName string) error {
 		return fmt.Errorf("no active debug session")
 	}
 
-	if d.isFallback {
-		if cmdName == "continue" {
-			return d.continueFallbackLocked()
-		}
-		// next or step
-		d.state.CurrentLine++
-		d.stepIndex++
-		d.state.LocalVars = append(d.state.LocalVars, Variable{
-			Name:  fmt.Sprintf("step_%d", d.stepIndex),
-			Type:  "int",
-			Value: fmt.Sprintf("%d", d.stepIndex*10),
-		})
-		return nil
-	}
-
 	var out CommandOut
 	in := DebuggerCommand{Name: cmdName}
 	err := d.callRPCLocked("Command", in, &out)
@@ -640,44 +558,6 @@ func (d *Debugger) runCommandLocked(cmdName string) error {
 
 	d.updateStateFromDlvLocked(out.State)
 	d.refreshLocalVarsLocked()
-
-	return nil
-}
-
-func (d *Debugger) continueFallbackLocked() error {
-	cleanFile := filepath.Clean(d.state.CurrentFile)
-	bpList := d.breakpoints[cleanFile]
-	if bpList == nil {
-		baseName := filepath.Base(d.state.CurrentFile)
-		for f, lines := range d.breakpoints {
-			if filepath.Base(f) == baseName {
-				bpList = lines
-				break
-			}
-		}
-	}
-
-	foundNext := false
-	if bpList != nil {
-		minNext := 999999
-		for l, set := range bpList {
-			if set && l > d.state.CurrentLine && l < minNext {
-				minNext = l
-			}
-		}
-		if minNext != 999999 {
-			d.state.CurrentLine = minNext
-			foundNext = true
-		}
-	}
-
-	if !foundNext {
-		d.state.Active = false
-		d.state.Exited = true
-		d.state.ExitCode = 0
-		d.state.CurrentLine = 0
-		d.state.LocalVars = nil
-	}
 
 	return nil
 }
@@ -788,7 +668,7 @@ func (d *Debugger) callRPCLocked(method string, params interface{}, result inter
 }
 
 func (d *Debugger) stopSessionLocked() {
-	if d.state.Active && !d.isFallback {
+	if d.state.Active {
 		var out DetachOut
 		_ = d.callRPCLocked("Detach", DetachIn{Kill: true}, &out)
 	}

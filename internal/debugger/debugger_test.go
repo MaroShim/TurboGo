@@ -28,7 +28,21 @@ func TestDebuggerBreakpoints(t *testing.T) {
 	}
 }
 
-func TestDebuggerSessionAndFallback(t *testing.T) {
+func TestDebuggerMissingDelveError(t *testing.T) {
+	t.Setenv("PATH", "")
+	t.Setenv("GOPATH", t.TempDir())
+
+	dbg := NewDebugger()
+	err := dbg.StartSession("dummy_bin", t.TempDir(), "sample.go")
+	if err == nil {
+		t.Fatalf("expected error when delve is missing, got nil")
+	}
+	if !strings.Contains(err.Error(), "delve (dlv) not found") || !strings.Contains(err.Error(), "go install github.com/go-delve/delve/cmd/dlv@latest") {
+		t.Errorf("expected actionable error message with installation instruction, got: %v", err)
+	}
+}
+
+func TestDebuggerSession(t *testing.T) {
 	tmpDir := t.TempDir()
 	srcFile := filepath.Join(tmpDir, "sample_debug.go")
 	code := `package main

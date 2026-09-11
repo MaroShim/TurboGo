@@ -132,9 +132,13 @@ func main() {
 		case "debug_continue":
 			if !app.GetDebugger().IsActive() {
 				bRes, err := app.StartDebugging()
-				if err != nil && bRes != nil && !bRes.Success {
+				if err != nil {
 					sound.PlayError()
-					compileDlg.Show(editor.FileName, bRes.LinesCompiled, bRes)
+					if bRes != nil && !bRes.Success {
+						compileDlg.Show(editor.FileName, bRes.LinesCompiled, bRes)
+					} else {
+						app.SetStatusMessage(err.Error())
+					}
 				} else {
 					sound.PlayBreakpoint()
 				}
@@ -149,9 +153,13 @@ func main() {
 		case "debug_step_over":
 			if !app.GetDebugger().IsActive() {
 				bRes, err := app.StartDebugging()
-				if err != nil && bRes != nil && !bRes.Success {
+				if err != nil {
 					sound.PlayError()
-					compileDlg.Show(editor.FileName, bRes.LinesCompiled, bRes)
+					if bRes != nil && !bRes.Success {
+						compileDlg.Show(editor.FileName, bRes.LinesCompiled, bRes)
+					} else {
+						app.SetStatusMessage(err.Error())
+					}
 				} else {
 					sound.PlayBreakpoint()
 				}
@@ -166,9 +174,13 @@ func main() {
 		case "debug_step_into":
 			if !app.GetDebugger().IsActive() {
 				bRes, err := app.StartDebugging()
-				if err != nil && bRes != nil && !bRes.Success {
+				if err != nil {
 					sound.PlayError()
-					compileDlg.Show(editor.FileName, bRes.LinesCompiled, bRes)
+					if bRes != nil && !bRes.Success {
+						compileDlg.Show(editor.FileName, bRes.LinesCompiled, bRes)
+					} else {
+						app.SetStatusMessage(err.Error())
+					}
 				} else {
 					sound.PlayBreakpoint()
 				}
