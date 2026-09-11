@@ -579,17 +579,19 @@ func (c *Client) Close() error {
 	}
 
 	// Terminate process with 1.5s escalation (Rule 4)
-	done := make(chan struct{})
-	go func() {
-		_ = c.cmd.Wait()
-		close(done)
-	}()
+	if c.cmd != nil {
+		done := make(chan struct{})
+		go func() {
+			_ = c.cmd.Wait()
+			close(done)
+		}()
 
-	select {
-	case <-done:
-	case <-time.After(1500 * time.Millisecond):
-		if c.cmd != nil && c.cmd.Process != nil {
-			_ = c.cmd.Process.Kill()
+		select {
+		case <-done:
+		case <-time.After(1500 * time.Millisecond):
+			if c.cmd.Process != nil {
+				_ = c.cmd.Process.Kill()
+			}
 		}
 	}
 
