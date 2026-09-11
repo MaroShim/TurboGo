@@ -1,10 +1,15 @@
 # Turbo Go (Version 0.89)
 
+
 > **Retro Borland Turbo Pascal / Turbo C Look & Feel IDE for the Go Language**
 
 **Turbo Go** is a retro terminal development environment (TUI IDE) that brings together the classic 90s visual interface of Borland's legendary **Turbo Pascal** and **Turbo C** (Turbo Vision blue editor canvas, double-line frames `╔═╗`, top pull-down menu bar, bottom hotkey bar, and the `Alt+F5` User Screen) with the modern **Go compiler and Delve debugger**.
 
 ---
+
+## Initial Screen
+
+<img width="956" height="751" alt="Image" src="https://github.com/user-attachments/assets/e9fabdc7-f2f2-4db5-81f0-f004f854a364" />
 
 ## Key Features
 
