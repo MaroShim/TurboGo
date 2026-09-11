@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"tg/internal/compiler"
 	"tg/internal/debugger"
+	"tg/internal/lsp"
 )
 
 // DialogHolder interfaces
@@ -28,6 +30,7 @@ type App struct {
 	editor      *Editor
 	debugger    *debugger.Debugger
 	watchWindow *WatchWindow
+	lspClient   *lsp.Client
 
 	// Modal Dialogs
 	compileDialog   Dialog
@@ -70,6 +73,29 @@ func NewApp(initialFile string) (*App, error) {
 		debugger:   debugger.NewDebugger(),
 		watchWindow: NewWatchWindow(2),
 	}
+
+	// Initialize LSP Client in background so it doesn't block UI startup
+	workDir := "."
+	if initialFile != "" {
+		workDir = filepath.Dir(initialFile)
+	}
+	if modRoot, hasMod := compiler.FindGoModuleRoot(workDir); hasMod {
+		workDir = modRoot
+	}
+
+	go func() {
+		client, err := lsp.StartGoplsClient(workDir)
+		if err == nil && client != nil {
+			app.lspClient = client
+			app.statusBar.SetLSPStatus("LSP: gopls", true)
+			app.SetStatusMessage("Turbo Go ready. LSP: gopls active [F12: Def, Alt+F1: Hover]")
+			if app.editor != nil && app.editor.FilePath != "" {
+				_ = client.DidOpen(app.editor.FilePath, strings.Join(app.editor.Lines, "\n"))
+			}
+		} else {
+			app.statusBar.SetLSPStatus("LSP: None", false)
+		}
+	}()
 
 	return app, nil
 }
@@ -174,7 +200,14 @@ func (a *App) Stop() {
 	if a.debugger != nil {
 		a.debugger.Stop()
 	}
+	if a.lspClient != nil {
+		_ = a.lspClient.Close()
+	}
 	a.screen.Fini()
+}
+
+func (a *App) GetLSP() *lsp.Client {
+	return a.lspClient
 }
 
 func (a *App) GetWatchWindow() *WatchWindow {

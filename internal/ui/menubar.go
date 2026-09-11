@@ -72,6 +72,7 @@ func NewMenuBar() *MenuBar {
 					{Label: "Go to definition", Shortcut: "F12", ActionID: "search_definition"},
 					{Label: "Previous location", Shortcut: "Ctrl+-", ActionID: "search_prev_pos"},
 					{Label: "Next location", Shortcut: "Ctrl+Shift+-", ActionID: "search_next_pos"},
+					{Label: "Hover / Type info", Shortcut: "Alt+F1", ActionID: "search_hover"},
 					{IsSep: true},
 					{Label: "Search again", Shortcut: "Ctrl+L", ActionID: "search_again"},
 					{Label: "Replace...", ActionID: "search_replace"},
@@ -119,6 +120,8 @@ func NewMenuBar() *MenuBar {
 					{Label: "Line Numbers", Shortcut: "Alt+L", ActionID: "options_toggle_linenums"},
 					{Label: "Sound: ON", ActionID: "options_toggle_sound"},
 					{Label: "Tab Size: 4", ActionID: "options_tab_size"},
+					{IsSep: true},
+					{Label: "LSP Status...", ActionID: "options_lsp_status"},
 				},
 			},
 			{
