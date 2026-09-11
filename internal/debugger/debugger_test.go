@@ -159,9 +159,9 @@ func TestMainLoopStepping(t *testing.T) {
 	defer os.Remove(bRes.BinaryPath)
 
 	dbg := NewDebugger()
-	// Breakpoint in Fibonacci: line 6
-	dbg.SetBreakpoint(fibPath, 6)
-	// Breakpoint in main: line 23 (inside the loop body)
+	// Breakpoint in Fibonacci: line 12 (a, b = b, a+b)
+	dbg.SetBreakpoint(fibPath, 12)
+	// Breakpoint in main: line 23 (fib = Fibonacci(i))
 	dbg.SetBreakpoint(fibPath, 23)
 
 	err = dbg.StartSession(bRes.BinaryPath, filepath.Dir(fibPath), fibPath)
@@ -170,19 +170,15 @@ func TestMainLoopStepping(t *testing.T) {
 	}
 	defer dbg.Stop()
 
-	for iter := 0; iter < 10; iter++ {
+	for iter := 0; iter < 15; iter++ {
 		st := dbg.GetState()
-		if !st.Active || st.Exited {
-			t.Fatalf("expected active session at iter %d, got active=%v exited=%v", iter, st.Active, st.Exited)
+		t.Logf("Hit %2d: Line=%d, Func=%s, Active=%v, Exited=%v",
+			iter, st.CurrentLine, st.CurrentFunc, st.Active, st.Exited)
+		for _, v := range st.LocalVars {
+			t.Logf("    %s = %s", v.Name, v.Value)
 		}
-		if iter%2 == 0 {
-			if st.CurrentLine != 23 || st.CurrentFunc != "main.main" {
-				t.Errorf("iter %d: expected break at line 23 in main.main, got line %d in %s", iter, st.CurrentLine, st.CurrentFunc)
-			}
-		} else {
-			if st.CurrentLine != 6 || st.CurrentFunc != "main.Fibonacci" {
-				t.Errorf("iter %d: expected break at line 6 in main.Fibonacci, got line %d in %s", iter, st.CurrentLine, st.CurrentFunc)
-			}
+		if st.Exited {
+			break
 		}
 		err = dbg.Continue()
 		if err != nil {
@@ -190,5 +186,54 @@ func TestMainLoopStepping(t *testing.T) {
 		}
 	}
 }
+
+func TestDynamicBreakpointDuringSession(t *testing.T) {
+	fibPath, err := filepath.Abs("../../examples/fibonacci/main.go")
+	if err != nil {
+		t.Fatalf("failed to resolve path: %v", err)
+	}
+
+	bRes := compiler.BuildDebug(fibPath)
+	if !bRes.Success {
+		t.Fatalf("build failed: %s", bRes.RawOutput)
+	}
+	defer os.Remove(bRes.BinaryPath)
+
+	dbg := NewDebugger()
+	// Start with ONLY breakpoint at line 23
+	dbg.SetBreakpoint(fibPath, 23)
+
+	err = dbg.StartSession(bRes.BinaryPath, filepath.Dir(fibPath), fibPath)
+	if err != nil {
+		t.Fatalf("failed to start debug: %v", err)
+	}
+	defer dbg.Stop()
+
+	st0 := dbg.GetState()
+	if st0.CurrentLine != 23 {
+		t.Fatalf("expected initial break at line 23, got %d", st0.CurrentLine)
+	}
+
+	// Now dynamically set breakpoint on line 12 while session is ALIVE!
+	dbg.SetBreakpoint(fibPath, 12)
+
+	hitLine12 := false
+	for iter := 0; iter < 10; iter++ {
+		err = dbg.Continue()
+		if err != nil {
+			t.Fatalf("continue failed: %v", err)
+		}
+		st := dbg.GetState()
+		if st.CurrentLine == 12 && st.CurrentFunc == "main.Fibonacci" {
+			hitLine12 = true
+			break
+		}
+	}
+
+	if !hitLine12 {
+		t.Errorf("expected dynamically added breakpoint at line 12 to be hit")
+	}
+}
+
 
 

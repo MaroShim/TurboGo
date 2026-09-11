@@ -144,6 +144,8 @@ type Debugger struct {
 	dlvCmd             *exec.Cmd
 	rpcPort            int
 	breakpoints        map[string]map[int]bool // file -> lines
+	dlvBpIDs           map[string]map[int]int  // file -> line -> delve breakpoint ID
+	dlvSources         []string                // cached Delve source list
 	state              DebugState
 	activeBin          string
 	isFallback         bool
@@ -154,8 +156,19 @@ type Debugger struct {
 func NewDebugger() *Debugger {
 	return &Debugger{
 		breakpoints: make(map[string]map[int]bool),
+		dlvBpIDs:    make(map[string]map[int]int),
 		rpcPort:     40455,
 	}
+}
+
+func (d *Debugger) findDelveSourceLocked(fileName string) string {
+	base := filepath.Base(fileName)
+	for _, s := range d.dlvSources {
+		if filepath.Base(s) == base {
+			return s
+		}
+	}
+	return fileName
 }
 
 // findFreePort finds an available TCP port
@@ -198,6 +211,38 @@ func (d *Debugger) SetBreakpoint(file string, line int) {
 		d.breakpoints[clean] = make(map[int]bool)
 	}
 	d.breakpoints[clean][line] = true
+
+	// If an active Delve session is running, dynamically create breakpoint in Delve
+	if d.state.Active && !d.isFallback {
+		delvePath := d.findDelveSourceLocked(file)
+		var out CreateBreakpointOut
+		in := CreateBreakpointIn{Breakpoint: DlvBreakpoint{File: delvePath, Line: line}}
+		err := d.callRPCLocked("CreateBreakpoint", in, &out)
+		if err != nil || out.Breakpoint.ID <= 0 {
+			absF, _ := filepath.Abs(file)
+			candidates := []string{
+				absF,
+				filepath.ToSlash(absF),
+				file,
+				filepath.Base(file),
+			}
+			for _, c := range candidates {
+				inRetry := CreateBreakpointIn{Breakpoint: DlvBreakpoint{File: c, Line: line}}
+				if rErr := d.callRPCLocked("CreateBreakpoint", inRetry, &out); rErr == nil && out.Breakpoint.ID > 0 {
+					break
+				}
+			}
+		}
+		if out.Breakpoint.ID > 0 {
+			if d.dlvBpIDs == nil {
+				d.dlvBpIDs = make(map[string]map[int]int)
+			}
+			if _, ok := d.dlvBpIDs[clean]; !ok {
+				d.dlvBpIDs[clean] = make(map[int]int)
+			}
+			d.dlvBpIDs[clean][line] = out.Breakpoint.ID
+		}
+	}
 }
 
 // RemoveBreakpoint explicitly removes a breakpoint at file:line
@@ -209,23 +254,35 @@ func (d *Debugger) RemoveBreakpoint(file string, line int) {
 	if lines, ok := d.breakpoints[clean]; ok {
 		delete(lines, line)
 	}
+
+	// If an active Delve session is running, dynamically remove breakpoint from Delve
+	if d.state.Active && !d.isFallback && d.dlvBpIDs != nil {
+		if lines, ok := d.dlvBpIDs[clean]; ok {
+			if bpID, found := lines[line]; found && bpID > 0 {
+				type ClearBreakpointIn struct {
+					Id int `json:"Id"`
+				}
+				type ClearBreakpointOut struct{}
+				var out ClearBreakpointOut
+				_ = d.callRPCLocked("ClearBreakpoint", ClearBreakpointIn{Id: bpID}, &out)
+				delete(lines, line)
+			}
+		}
+	}
 }
 
 // ToggleBreakpoint toggles a breakpoint at file:line
 func (d *Debugger) ToggleBreakpoint(file string, line int) bool {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
 	clean := filepath.Clean(file)
-	if _, ok := d.breakpoints[clean]; !ok {
-		d.breakpoints[clean] = make(map[int]bool)
-	}
+	d.mu.Lock()
+	has := d.breakpoints[clean] != nil && d.breakpoints[clean][line]
+	d.mu.Unlock()
 
-	if d.breakpoints[clean][line] {
-		delete(d.breakpoints[clean], line)
+	if has {
+		d.RemoveBreakpoint(file, line)
 		return false
 	} else {
-		d.breakpoints[clean][line] = true
+		d.SetBreakpoint(file, line)
 		return true
 	}
 }
@@ -268,7 +325,24 @@ func (d *Debugger) GetBreakpoints(file string) []int {
 func (d *Debugger) ClearBreakpoints() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+
+	// If active Delve session, clear in Delve
+	if d.state.Active && !d.isFallback && d.dlvBpIDs != nil {
+		type ClearBreakpointIn struct {
+			Id int `json:"Id"`
+		}
+		type ClearBreakpointOut struct{}
+		var out ClearBreakpointOut
+		for _, lines := range d.dlvBpIDs {
+			for _, bpID := range lines {
+				if bpID > 0 {
+					_ = d.callRPCLocked("ClearBreakpoint", ClearBreakpointIn{Id: bpID}, &out)
+				}
+			}
+		}
+	}
 	d.breakpoints = make(map[string]map[int]bool)
+	d.dlvBpIDs = make(map[string]map[int]int)
 }
 
 // StartSession launches Delve headless for the target binary and sets up breakpoints
@@ -341,20 +415,14 @@ func (d *Debugger) StartSession(binaryPath string, workDir string, currentFile s
 	// Fetch all sources recognized by Delve in the binary
 	var srcList ListSourcesOut
 	_ = d.callRPCLocked("ListSources", ListSourcesIn{}, &srcList)
+	d.dlvSources = srcList.Sources
 
-	findDelveSource := func(fileName string) string {
-		base := filepath.Base(fileName)
-		for _, s := range srcList.Sources {
-			if filepath.Base(s) == base {
-				return s
-			}
-		}
-		return fileName
-	}
+	d.dlvBpIDs = make(map[string]map[int]int)
 
 	// 1. Create Breakpoints in Delve
 	for f, lines := range d.breakpoints {
-		delvePath := findDelveSource(f)
+		clean := filepath.Clean(f)
+		delvePath := d.findDelveSourceLocked(f)
 		for l, set := range lines {
 			if !set {
 				continue
@@ -362,7 +430,7 @@ func (d *Debugger) StartSession(binaryPath string, workDir string, currentFile s
 			var out CreateBreakpointOut
 			in := CreateBreakpointIn{Breakpoint: DlvBreakpoint{File: delvePath, Line: l}}
 			err := d.callRPCLocked("CreateBreakpoint", in, &out)
-			if err != nil {
+			if err != nil || out.Breakpoint.ID <= 0 {
 				// Retry with clean, abs, and slash variations
 				absF, _ := filepath.Abs(f)
 				candidates := []string{
@@ -377,6 +445,12 @@ func (d *Debugger) StartSession(binaryPath string, workDir string, currentFile s
 						break
 					}
 				}
+			}
+			if out.Breakpoint.ID > 0 {
+				if _, ok := d.dlvBpIDs[clean]; !ok {
+					d.dlvBpIDs[clean] = make(map[int]int)
+				}
+				d.dlvBpIDs[clean][l] = out.Breakpoint.ID
 			}
 		}
 	}
@@ -648,6 +722,7 @@ func (d *Debugger) stopSessionLocked() {
 		d.activeBin = ""
 	}
 
+	d.dlvBpIDs = make(map[string]map[int]int)
 	d.state = DebugState{
 		Active: false,
 	}
