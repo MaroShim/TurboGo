@@ -146,3 +146,49 @@ func TestFibonacciDebug(t *testing.T) {
 	}
 }
 
+func TestMainLoopStepping(t *testing.T) {
+	fibPath, err := filepath.Abs("../../examples/fibonacci/main.go")
+	if err != nil {
+		t.Fatalf("failed to resolve path: %v", err)
+	}
+
+	bRes := compiler.BuildDebug(fibPath)
+	if !bRes.Success {
+		t.Fatalf("build failed: %s", bRes.RawOutput)
+	}
+	defer os.Remove(bRes.BinaryPath)
+
+	dbg := NewDebugger()
+	// Breakpoint in Fibonacci: line 6
+	dbg.SetBreakpoint(fibPath, 6)
+	// Breakpoint in main: line 23 (inside the loop body)
+	dbg.SetBreakpoint(fibPath, 23)
+
+	err = dbg.StartSession(bRes.BinaryPath, filepath.Dir(fibPath), fibPath)
+	if err != nil {
+		t.Fatalf("failed to start debug: %v", err)
+	}
+	defer dbg.Stop()
+
+	for iter := 0; iter < 10; iter++ {
+		st := dbg.GetState()
+		if !st.Active || st.Exited {
+			t.Fatalf("expected active session at iter %d, got active=%v exited=%v", iter, st.Active, st.Exited)
+		}
+		if iter%2 == 0 {
+			if st.CurrentLine != 23 || st.CurrentFunc != "main.main" {
+				t.Errorf("iter %d: expected break at line 23 in main.main, got line %d in %s", iter, st.CurrentLine, st.CurrentFunc)
+			}
+		} else {
+			if st.CurrentLine != 6 || st.CurrentFunc != "main.Fibonacci" {
+				t.Errorf("iter %d: expected break at line 6 in main.Fibonacci, got line %d in %s", iter, st.CurrentLine, st.CurrentFunc)
+			}
+		}
+		err = dbg.Continue()
+		if err != nil {
+			t.Fatalf("continue failed at iter %d: %v", iter, err)
+		}
+	}
+}
+
+
