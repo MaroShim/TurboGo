@@ -225,12 +225,21 @@ func (a *App) SyncDebuggerState() {
 		if targetFile != "" {
 			resolved := targetFile
 			if !filepath.IsAbs(resolved) {
+				// 1. Try base name in current editor file's directory
 				if a.editor.FilePath != "" {
+					baseCand := filepath.Join(filepath.Dir(a.editor.FilePath), filepath.Base(targetFile))
+					if _, err := os.Stat(baseCand); err == nil {
+						resolved = baseCand
+					}
+				}
+				// 2. Try relative to current editor file's directory
+				if !filepath.IsAbs(resolved) && a.editor.FilePath != "" {
 					cand := filepath.Join(filepath.Dir(a.editor.FilePath), targetFile)
 					if _, err := os.Stat(cand); err == nil {
 						resolved = cand
 					}
 				}
+				// 3. Try relative to current working directory
 				if !filepath.IsAbs(resolved) {
 					if cwd, err := os.Getwd(); err == nil {
 						cand := filepath.Join(cwd, targetFile)
@@ -246,6 +255,9 @@ func (a *App) SyncDebuggerState() {
 			if fi, err := os.Stat(resolved); err == nil && fi.Mode().IsRegular() {
 				cleanTarget := filepath.Clean(resolved)
 				cleanCurrent := filepath.Clean(a.editor.FilePath)
+				if absCur, err := filepath.Abs(cleanCurrent); err == nil {
+					cleanCurrent = absCur
+				}
 				if cleanTarget != cleanCurrent {
 					_ = a.editor.LoadFile(cleanTarget)
 				}

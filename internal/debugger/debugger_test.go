@@ -343,6 +343,39 @@ func TestMultiFileBreakpointsDelve(t *testing.T) {
 	}
 }
 
+func TestStepIntoMathGo(t *testing.T) {
+	calcMain, err := filepath.Abs("../../examples/calc/main.go")
+	if err != nil {
+		t.Fatalf("failed to resolve calc main path: %v", err)
+	}
+
+	bRes := compiler.BuildDebug(calcMain)
+	if !bRes.Success {
+		t.Fatalf("build failed: %s", bRes.RawOutput)
+	}
+	defer os.Remove(bRes.BinaryPath)
+
+	dbg := NewDebugger()
+	dbg.SetBreakpoint(calcMain, 13)
+
+	err = dbg.StartSession(bRes.BinaryPath, filepath.Dir(calcMain), calcMain)
+	if err != nil {
+		t.Fatalf("failed to start debug: %v", err)
+	}
+	defer dbg.Stop()
+
+	st1 := dbg.GetState()
+	t.Logf("Break at: File=%q, Line=%d, Func=%q", st1.CurrentFile, st1.CurrentLine, st1.CurrentFunc)
+
+	err = dbg.Step()
+	if err != nil {
+		t.Fatalf("Step failed: %v", err)
+	}
+	st2 := dbg.GetState()
+	t.Logf("After Step: File=%q, Line=%d, Func=%q", st2.CurrentFile, st2.CurrentLine, st2.CurrentFunc)
+}
+
+
 
 
 
