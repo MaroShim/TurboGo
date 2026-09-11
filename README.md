@@ -7,6 +7,10 @@
 
 ---
 
+## Initial Screen
+
+<img width="956" height="751" alt="Image" src="https://github.com/user-attachments/assets/e9fabdc7-f2f2-4db5-81f0-f004f854a364" />
+
 ## Key Features
 
 * **Classic Borland Turbo Vision UI**:
