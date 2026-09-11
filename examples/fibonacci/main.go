@@ -16,8 +16,11 @@ func Fibonacci(n int) uint64 {
 
 func main() {
 	fmt.Println("--- Fibonacci Sequence Calculator (Turbo Go) ---")
-	for i := 0; i <= 15; i++ {
-		fib := Fibonacci(i)
+	maxSteps := 15
+	var fib uint64
+
+	for i := 0; i <= maxSteps; i++ {
+		fib = Fibonacci(i)
 		fmt.Printf("F(%2d) = %d\n", i, fib)
 	}
 	fmt.Println("Done!")

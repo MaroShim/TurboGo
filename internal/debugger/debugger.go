@@ -102,6 +102,15 @@ type ListLocalVarsOut struct {
 	Variables []DlvVariable `json:"variables"`
 }
 
+type ListFunctionArgsIn struct {
+	Scope EvalScope  `json:"scope"`
+	Cfg   LoadConfig `json:"cfg"`
+}
+
+type ListFunctionArgsOut struct {
+	Args []DlvVariable `json:"args"`
+}
+
 type DetachIn struct {
 	Kill bool `json:"kill"`
 }
@@ -525,35 +534,50 @@ func (d *Debugger) refreshLocalVarsLocked() {
 		return
 	}
 
-	var out ListLocalVarsOut
-	in := ListLocalVarsIn{
-		Scope: EvalScope{GoroutineID: -1, Frame: 0},
-		Cfg: LoadConfig{
-			FollowPointers:     true,
-			MaxVariableRecurse: 1,
-			MaxStringLen:       64,
-			MaxArrayValues:     10,
-			MaxStructFields:    10,
-		},
+	scope := EvalScope{GoroutineID: -1, Frame: 0}
+	cfg := LoadConfig{
+		FollowPointers:     true,
+		MaxVariableRecurse: 1,
+		MaxStringLen:       64,
+		MaxArrayValues:     10,
+		MaxStructFields:    10,
 	}
 
-	err := d.callRPCLocked("ListLocalVars", in, &out)
-	if err == nil {
-		vars := make([]Variable, len(out.Variables))
-		for i, v := range out.Variables {
+	var allVars []Variable
+
+	// 1. Fetch function arguments (e.g. n in Fibonacci(n))
+	var argsOut ListFunctionArgsOut
+	if err := d.callRPCLocked("ListFunctionArgs", ListFunctionArgsIn{Scope: scope, Cfg: cfg}, &argsOut); err == nil {
+		for _, v := range argsOut.Args {
 			val := v.Value
-			// Clean long strings
 			if len(val) > 50 {
 				val = val[:47] + "..."
 			}
-			vars[i] = Variable{
+			allVars = append(allVars, Variable{
 				Name:  v.Name,
 				Type:  v.Type,
 				Value: val,
-			}
+			})
 		}
-		d.state.LocalVars = vars
 	}
+
+	// 2. Fetch local variables (e.g. a, b in Fibonacci)
+	var localsOut ListLocalVarsOut
+	if err := d.callRPCLocked("ListLocalVars", ListLocalVarsIn{Scope: scope, Cfg: cfg}, &localsOut); err == nil {
+		for _, v := range localsOut.Variables {
+			val := v.Value
+			if len(val) > 50 {
+				val = val[:47] + "..."
+			}
+			allVars = append(allVars, Variable{
+				Name:  v.Name,
+				Type:  v.Type,
+				Value: val,
+			})
+		}
+	}
+
+	d.state.LocalVars = allVars
 }
 
 func (d *Debugger) callRPCLocked(method string, params interface{}, result interface{}) error {
