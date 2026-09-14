@@ -68,6 +68,9 @@ type Client struct {
 	isReady  atomic.Bool
 	isClosed atomic.Bool
 	closeWg  sync.WaitGroup
+
+	muLegend   sync.RWMutex
+	tokenTypes []string
 }
 
 type rpcRequest struct {
@@ -339,14 +342,33 @@ func (c *Client) initialize(ctx context.Context) error {
 					"openClose": true,
 					"change":    1, // Full document sync (1)
 				},
+				"semanticTokens": map[string]interface{}{
+					"requests": map[string]interface{}{
+						"full": true,
+					},
+					"tokenTypes": []string{
+						"type", "class", "enum", "interface", "struct", "typeParameter",
+						"parameter", "variable", "property", "enumMember", "function",
+						"method", "macro", "keyword", "modifier", "comment", "string",
+						"number", "regexp", "operator", "namespace",
+					},
+					"tokenModifiers": []string{
+						"declaration", "definition", "readonly", "static", "deprecated",
+						"abstract", "async", "modification", "documentation", "defaultLibrary",
+					},
+					"formats": []string{"relative"},
+				},
 			},
 		},
 	}
 
-	_, err := c.call(ctx, "initialize", params)
+	res, err := c.call(ctx, "initialize", params)
 	if err != nil {
 		return err
 	}
+
+	// Capture server token types legend if provided
+	c.parseServerLegend(res)
 
 	// Send initialized notification
 	_ = c.notify("initialized", map[string]interface{}{})
@@ -555,6 +577,131 @@ func cleanHoverSnippet(s string) string {
 	}
 	// Return first non-empty representative signature line
 	return clean[0]
+}
+
+// SemanticTokenSpan represents a decoded semantic highlight token
+type SemanticTokenSpan struct {
+	Line           int    // 0-based line
+	StartCol       int    // 0-based character/column offset
+	Length         int    // Length in characters
+	TokenType      string // e.g. "function", "type", "parameter", "variable"
+	TokenModifiers int    // Bitmask of modifiers
+}
+
+func (c *Client) parseServerLegend(initResp *rpcResponse) {
+	if initResp == nil || len(initResp.Result) == 0 {
+		return
+	}
+	var res struct {
+		Capabilities struct {
+			SemanticTokensProvider struct {
+				Legend struct {
+					TokenTypes []string `json:"tokenTypes"`
+				} `json:"legend"`
+			} `json:"semanticTokensProvider"`
+		} `json:"capabilities"`
+	}
+	if err := json.Unmarshal(initResp.Result, &res); err == nil {
+		types := res.Capabilities.SemanticTokensProvider.Legend.TokenTypes
+		if len(types) > 0 {
+			c.muLegend.Lock()
+			c.tokenTypes = types
+			c.muLegend.Unlock()
+		}
+	}
+}
+
+// GetTokenTypes returns current semantic token types legend
+func (c *Client) GetTokenTypes() []string {
+	c.muLegend.RLock()
+	defer c.muLegend.RUnlock()
+	if len(c.tokenTypes) > 0 {
+		cp := make([]string, len(c.tokenTypes))
+		copy(cp, c.tokenTypes)
+		return cp
+	}
+	// Default LSP semantic token types
+	return []string{
+		"type", "class", "enum", "interface", "struct", "typeParameter",
+		"parameter", "variable", "property", "enumMember", "function",
+		"method", "macro", "keyword", "modifier", "comment", "string",
+		"number", "regexp", "operator", "namespace",
+	}
+}
+
+// DecodeSemanticTokens converts LSP compressed 5-tuple deltas into absolute SemanticTokenSpans
+func DecodeSemanticTokens(data []uint32, tokenTypes []string) []SemanticTokenSpan {
+	if len(data) < 5 {
+		return nil
+	}
+
+	n := len(data) / 5
+	spans := make([]SemanticTokenSpan, 0, n)
+
+	currentLine := 0
+	currentCol := 0
+
+	for i := 0; i < len(data)-4; i += 5 {
+		deltaLine := int(data[i])
+		deltaStart := int(data[i+1])
+		length := int(data[i+2])
+		tokenTypeIdx := int(data[i+3])
+		modifiers := int(data[i+4])
+
+		if deltaLine > 0 {
+			currentLine += deltaLine
+			currentCol = deltaStart
+		} else {
+			currentCol += deltaStart
+		}
+
+		typeName := "unknown"
+		if tokenTypeIdx >= 0 && tokenTypeIdx < len(tokenTypes) {
+			typeName = tokenTypes[tokenTypeIdx]
+		}
+
+		spans = append(spans, SemanticTokenSpan{
+			Line:           currentLine,
+			StartCol:       currentCol,
+			Length:         length,
+			TokenType:      typeName,
+			TokenModifiers: modifiers,
+		})
+	}
+
+	return spans
+}
+
+// SemanticTokensFull queries full semantic tokens for a document
+func (c *Client) SemanticTokensFull(ctx context.Context, filePath string) ([]SemanticTokenSpan, error) {
+	if !c.IsAvailable() {
+		return nil, ErrClientClosed
+	}
+
+	params := map[string]interface{}{
+		"textDocument": map[string]interface{}{
+			"uri": PathToURI(filePath),
+		},
+	}
+
+	resp, err := c.call(ctx, "textDocument/semanticTokens/full", params)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil || len(resp.Result) == 0 || string(resp.Result) == "null" {
+		return nil, nil
+	}
+
+	var res struct {
+		ResultId string   `json:"resultId"`
+		Data     []uint32 `json:"data"`
+	}
+	if err := json.Unmarshal(resp.Result, &res); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal semantic tokens: %w", err)
+	}
+
+	tokenTypes := c.GetTokenTypes()
+	return DecodeSemanticTokens(res.Data, tokenTypes), nil
 }
 
 // Close gracefully terminates the server process.

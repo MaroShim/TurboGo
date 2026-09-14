@@ -6,10 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
+	"tg/internal/lsp"
 	"tg/internal/syntax"
 )
 
@@ -53,6 +55,10 @@ type Editor struct {
 	// Undo / Redo history
 	undoStack []EditSnapshot
 	redoStack []EditSnapshot
+
+	// LSP Semantic Tokens cache
+	muSemantic     sync.RWMutex
+	semanticTokens map[int][]lsp.SemanticTokenSpan
 }
 
 // NavLocation preserves editor position across files for F12 navigation
@@ -108,6 +114,7 @@ func NewEditor(filePath string, windowNum int) *Editor {
 		HighlightLine:     -1,
 		HighlightStartCol: 0,
 		HighlightEndCol:   0,
+		semanticTokens:    make(map[int][]lsp.SemanticTokenSpan),
 	}
 
 	if filePath != "" {
@@ -192,6 +199,11 @@ func (e *Editor) LoadFile(path string) error {
 	e.ScrollX = 0
 	e.ScrollY = 0
 	e.CurrentIP = 0
+
+	// Reset semantic tokens for the newly loaded file
+	e.muSemantic.Lock()
+	e.semanticTokens = make(map[int][]lsp.SemanticTokenSpan)
+	e.muSemantic.Unlock()
 
 	// 2. Restore or init breakpoints for the new file
 	if e.FileBreakpoints == nil {
@@ -288,6 +300,25 @@ func (e *Editor) SaveAs(path string) error {
 	e.FilePath = path
 	e.FileName = filepath.Base(path)
 	return e.SaveFile()
+}
+
+// SetSemanticTokens updates the in-memory cache of LSP semantic tokens
+func (e *Editor) SetSemanticTokens(spans []lsp.SemanticTokenSpan) {
+	e.muSemantic.Lock()
+	defer e.muSemantic.Unlock()
+
+	newMap := make(map[int][]lsp.SemanticTokenSpan)
+	for _, span := range spans {
+		newMap[span.Line] = append(newMap[span.Line], span)
+	}
+	e.semanticTokens = newMap
+}
+
+// GetSemanticTokensForLine returns cached semantic token spans for the given 0-based line
+func (e *Editor) GetSemanticTokensForLine(line int) []lsp.SemanticTokenSpan {
+	e.muSemantic.RLock()
+	defer e.muSemantic.RUnlock()
+	return e.semanticTokens[line]
 }
 
 func (e *Editor) ToggleBreakpoint(line int) bool {
@@ -856,6 +887,37 @@ func (e *Editor) Draw(screen tcell.Screen, x, y, width, height int, focused bool
 		if lineIdx < len(e.Lines) {
 			lineText := e.Lines[lineIdx]
 			tokens := syntax.HighlightLine(lineText, lineBaseStyle, &inBlockComment)
+
+			// Apply LSP Semantic Tokens overlay if available for this line
+			if semSpans := e.GetSemanticTokensForLine(lineIdx); len(semSpans) > 0 {
+				for _, span := range semSpans {
+					var semStyle tcell.Style
+					switch span.TokenType {
+					case "function", "method":
+						semStyle = lineBaseStyle.Foreground(tcell.ColorWhite).Bold(true)
+					case "type", "class", "enum", "interface", "struct", "typeParameter":
+						semStyle = lineBaseStyle.Foreground(tcell.ColorLightCyan)
+					case "parameter":
+						semStyle = lineBaseStyle.Foreground(tcell.ColorLightGreen)
+					case "variable", "property":
+						semStyle = lineBaseStyle.Foreground(tcell.ColorWhite)
+					case "namespace":
+						semStyle = lineBaseStyle.Foreground(tcell.ColorLightCyan).Bold(true)
+					case "macro":
+						semStyle = lineBaseStyle.Foreground(tcell.ColorYellow).Bold(true)
+					}
+
+					if semStyle != lineBaseStyle {
+						end := span.StartCol + span.Length
+						if end > len(tokens) {
+							end = len(tokens)
+						}
+						for c := span.StartCol; c < end; c++ {
+							tokens[c].Style = semStyle
+						}
+					}
+				}
+			}
 
 			screenX := codeStartX
 			tabW := e.TabWidth

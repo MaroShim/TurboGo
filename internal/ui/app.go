@@ -1,10 +1,12 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"tg/internal/compiler"
@@ -94,6 +96,7 @@ func NewApp(initialFile string) (*App, error) {
 			app.SetStatusMessage("Turbo Go ready. LSP: gopls active [F12: Def, Alt+F1: Hover]")
 			if app.editor != nil && app.editor.FilePath != "" {
 				_ = client.DidOpen(app.editor.FilePath, strings.Join(app.editor.Lines, "\n"))
+				app.RequestSemanticTokens()
 			}
 		} else {
 			app.statusBar.SetLSPStatus("LSP: None", false)
@@ -211,6 +214,29 @@ func (a *App) Stop() {
 
 func (a *App) GetLSP() *lsp.Client {
 	return a.lspClient
+}
+
+// RequestSemanticTokens requests semantic tokens for current editor file asynchronously
+func (a *App) RequestSemanticTokens() {
+	if a.lspClient == nil || !a.lspClient.IsAvailable() || a.editor == nil || a.editor.FilePath == "" {
+		return
+	}
+
+	filePath := a.editor.FilePath
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		spans, err := a.lspClient.SemanticTokensFull(ctx, filePath)
+		if err == nil && len(spans) > 0 {
+			if a.editor != nil && a.editor.FilePath == filePath {
+				a.editor.SetSemanticTokens(spans)
+				if a.screen != nil {
+					_ = a.screen.PostEvent(tcell.NewEventInterrupt(nil))
+				}
+			}
+		}
+	}()
 }
 
 func (a *App) GetWatchWindow() *WatchWindow {

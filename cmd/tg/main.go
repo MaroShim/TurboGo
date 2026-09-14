@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -62,6 +63,7 @@ func main() {
 					app.SetStatusMessage("Opened " + editor.FileName)
 					if lspClient := app.GetLSP(); lspClient != nil && lspClient.IsAvailable() {
 						_ = lspClient.DidOpen(editor.FilePath, strings.Join(editor.Lines, "\n"))
+						app.RequestSemanticTokens()
 					}
 				}
 			})
@@ -76,6 +78,7 @@ func main() {
 						app.SetStatusMessage("Saved " + editor.FileName)
 						if lspClient := app.GetLSP(); lspClient != nil && lspClient.IsAvailable() {
 							_ = lspClient.DidOpen(editor.FilePath, strings.Join(editor.Lines, "\n"))
+							app.RequestSemanticTokens()
 						}
 					}
 				})
@@ -88,6 +91,7 @@ func main() {
 					app.SetStatusMessage("Saved " + editor.FileName)
 					if lspClient := app.GetLSP(); lspClient != nil && lspClient.IsAvailable() {
 						_ = lspClient.DidChange(editor.FilePath, strings.Join(editor.Lines, "\n"))
+						app.RequestSemanticTokens()
 					}
 				}
 			}
@@ -105,6 +109,7 @@ func main() {
 					app.SetStatusMessage("Saved " + editor.FileName)
 					if lspClient := app.GetLSP(); lspClient != nil && lspClient.IsAvailable() {
 						_ = lspClient.DidOpen(editor.FilePath, strings.Join(editor.Lines, "\n"))
+						app.RequestSemanticTokens()
 					}
 				}
 			})
@@ -421,6 +426,31 @@ func main() {
 	}
 
 	app.SetActionHandler(dispatchAction)
+
+	// Debounce timer for LSP semantic tokens & document sync on typing
+	var (
+		lspDebounceTimer *time.Timer
+		lspDebounceMu    sync.Mutex
+	)
+	triggerLSPDebounce := func() {
+		lspClient := app.GetLSP()
+		if lspClient == nil || !lspClient.IsAvailable() || editor.FilePath == "" {
+			return
+		}
+		lspDebounceMu.Lock()
+		defer lspDebounceMu.Unlock()
+		if lspDebounceTimer != nil {
+			lspDebounceTimer.Stop()
+		}
+		filePath := editor.FilePath
+		linesContent := strings.Join(editor.Lines, "\n")
+		lspDebounceTimer = time.AfterFunc(300*time.Millisecond, func() {
+			if lspClient.IsAvailable() {
+				_ = lspClient.DidChange(filePath, linesContent)
+				app.RequestSemanticTokens()
+			}
+		})
+	}
 
 	// Main event loop
 	for {
@@ -869,14 +899,19 @@ func main() {
 				editor.PageDown(h - 4)
 			case tcell.KeyEnter:
 				editor.InsertNewLine()
+				triggerLSPDebounce()
 			case tcell.KeyTab:
 				editor.InsertTab()
+				triggerLSPDebounce()
 			case tcell.KeyBackspace, tcell.KeyBackspace2:
 				editor.Backspace()
+				triggerLSPDebounce()
 			case tcell.KeyDelete:
 				editor.Delete()
+				triggerLSPDebounce()
 			case tcell.KeyRune:
 				editor.InsertRune(ch)
+				triggerLSPDebounce()
 			}
 		}
 	}

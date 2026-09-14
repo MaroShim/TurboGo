@@ -211,3 +211,41 @@ func TestMockLSPClientInteraction(t *testing.T) {
 	_ = clientOutR.Close()
 	wg.Wait()
 }
+
+func TestDecodeSemanticTokens(t *testing.T) {
+	legend := []string{
+		"type", "class", "enum", "interface", "struct", "typeParameter",
+		"parameter", "variable", "property", "enumMember", "function",
+	}
+
+	// Encodes:
+	// Token 1: line 2, col 5, len 8, type "function" (idx 10), mod 0
+	// Token 2: line 2, col 14 (deltaCol 9), len 4, type "parameter" (idx 6), mod 0
+	// Token 3: line 5 (deltaLine 3), col 1, len 6, type "type" (idx 0), mod 1
+	data := []uint32{
+		2, 5, 8, 10, 0,
+		0, 9, 4, 6, 0,
+		3, 1, 6, 0, 1,
+	}
+
+	spans := DecodeSemanticTokens(data, legend)
+	if len(spans) != 3 {
+		t.Fatalf("expected 3 spans, got %d", len(spans))
+	}
+
+	// Span 1: line 2, col 5, len 8, type "function"
+	if spans[0].Line != 2 || spans[0].StartCol != 5 || spans[0].Length != 8 || spans[0].TokenType != "function" {
+		t.Errorf("span[0] mismatch: %+v", spans[0])
+	}
+
+	// Span 2: line 2, col 14, len 4, type "parameter"
+	if spans[1].Line != 2 || spans[1].StartCol != 14 || spans[1].Length != 4 || spans[1].TokenType != "parameter" {
+		t.Errorf("span[1] mismatch: %+v", spans[1])
+	}
+
+	// Span 3: line 5, col 1, len 6, type "type"
+	if spans[2].Line != 5 || spans[2].StartCol != 1 || spans[2].Length != 6 || spans[2].TokenType != "type" || spans[2].TokenModifiers != 1 {
+		t.Errorf("span[2] mismatch: %+v", spans[2])
+	}
+}
+
