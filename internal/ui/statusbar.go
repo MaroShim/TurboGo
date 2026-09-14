@@ -89,12 +89,15 @@ func (sb *StatusBar) Draw(screen tcell.Screen, y, width int) {
 			screen.SetContent(xPos, y, r, nil, tagStyle)
 			xPos++
 		}
-		xPos++
 		for _, r := range sb.Message {
 			if xPos < badgeLimit {
 				screen.SetContent(xPos, y, r, nil, msgStyle)
 				xPos++
 			}
+		}
+		if xPos < badgeLimit {
+			screen.SetContent(xPos, y, ' ', nil, msgStyle)
+			xPos++
 		}
 		return
 	}
