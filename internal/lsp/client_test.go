@@ -132,6 +132,24 @@ func TestMockLSPClientInteraction(t *testing.T) {
 						"value": "```go\nfunc TargetFunction() bool\n```",
 					},
 				}
+			case "textDocument/completion":
+				result = map[string]interface{}{
+					"isIncomplete": false,
+					"items": []map[string]interface{}{
+						{
+							"label":      "Println",
+							"kind":       3, // Function
+							"detail":     "func(a ...any) (n int, err error)",
+							"insertText": "Println",
+						},
+						{
+							"label":      "Printf",
+							"kind":       3, // Function
+							"detail":     "func(format string, a ...any) (n int, err error)",
+							"insertText": "Printf",
+						},
+					},
+				}
 			case "shutdown":
 				result = nil
 			case "exit":
@@ -205,7 +223,22 @@ func TestMockLSPClientInteraction(t *testing.T) {
 		t.Errorf("expected 'func TargetFunction() bool', got %q", hoverSnippet)
 	}
 
-	// 5. Clean teardown
+	// 5. Completion query
+	completions, err := client.Completion(ctx, "/workspace/main.go", 10, 5)
+	if err != nil {
+		t.Fatalf("completion query failed: %v", err)
+	}
+	if len(completions) != 2 {
+		t.Fatalf("expected 2 completions, got %d", len(completions))
+	}
+	if completions[0].Label != "Println" || completions[0].Kind.Badge() != "[func]" {
+		t.Errorf("unexpected completion item 0: %+v", completions[0])
+	}
+	if completions[1].Label != "Printf" || completions[1].ValueToInsert() != "Printf" {
+		t.Errorf("unexpected completion item 1: %+v", completions[1])
+	}
+
+	// 6. Clean teardown
 	client.isClosed.Store(true)
 	_ = clientInW.Close()
 	_ = clientOutR.Close()

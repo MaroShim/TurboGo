@@ -338,6 +338,11 @@ func (c *Client) initialize(ctx context.Context) error {
 				"hover": map[string]interface{}{
 					"contentFormat": []string{"plaintext", "markdown"},
 				},
+				"completion": map[string]interface{}{
+					"completionItem": map[string]interface{}{
+						"snippetSupport": false,
+					},
+				},
 				"synchronization": map[string]interface{}{
 					"openClose": true,
 					"change":    1, // Full document sync (1)
@@ -577,6 +582,127 @@ func cleanHoverSnippet(s string) string {
 	}
 	// Return first non-empty representative signature line
 	return clean[0]
+}
+
+// CompletionItemKind represents the LSP completion item category.
+type CompletionItemKind int
+
+const (
+	CompletionKindText          CompletionItemKind = 1
+	CompletionKindMethod        CompletionItemKind = 2
+	CompletionKindFunction      CompletionItemKind = 3
+	CompletionKindConstructor   CompletionItemKind = 4
+	CompletionKindField         CompletionItemKind = 5
+	CompletionKindVariable      CompletionItemKind = 6
+	CompletionKindClass         CompletionItemKind = 7
+	CompletionKindInterface     CompletionItemKind = 8
+	CompletionKindModule        CompletionItemKind = 9
+	CompletionKindProperty      CompletionItemKind = 10
+	CompletionKindUnit          CompletionItemKind = 11
+	CompletionKindValue         CompletionItemKind = 12
+	CompletionKindEnum          CompletionItemKind = 13
+	CompletionKindKeyword       CompletionItemKind = 14
+	CompletionKindSnippet       CompletionItemKind = 15
+	CompletionKindColor         CompletionItemKind = 16
+	CompletionKindFile          CompletionItemKind = 17
+	CompletionKindReference     CompletionItemKind = 18
+	CompletionKindFolder        CompletionItemKind = 19
+	CompletionKindEnumMember    CompletionItemKind = 20
+	CompletionKindConstant      CompletionItemKind = 21
+	CompletionKindStruct        CompletionItemKind = 22
+	CompletionKindEvent         CompletionItemKind = 23
+	CompletionKindOperator      CompletionItemKind = 24
+	CompletionKindTypeParameter CompletionItemKind = 25
+)
+
+// Badge returns a concise, retro Borland bracketed badge for the completion item kind.
+func (k CompletionItemKind) Badge() string {
+	switch k {
+	case CompletionKindFunction:
+		return "[func]"
+	case CompletionKindMethod:
+		return "[mthd]"
+	case CompletionKindVariable:
+		return "[var]"
+	case CompletionKindConstant:
+		return "[const]"
+	case CompletionKindStruct, CompletionKindClass:
+		return "[struct]"
+	case CompletionKindInterface:
+		return "[iface]"
+	case CompletionKindModule:
+		return "[pkg]"
+	case CompletionKindField, CompletionKindProperty:
+		return "[field]"
+	case CompletionKindKeyword:
+		return "[keyw]"
+	case CompletionKindSnippet:
+		return "[snip]"
+	case CompletionKindTypeParameter:
+		return "[type]"
+	default:
+		return "[ident]"
+	}
+}
+
+// CompletionItem models a single completion entry returned by the LSP server.
+type CompletionItem struct {
+	Label         string             `json:"label"`
+	Kind          CompletionItemKind `json:"kind"`
+	Detail        string             `json:"detail"`
+	Documentation string             `json:"documentation,omitempty"`
+	InsertText    string             `json:"insertText"`
+	SortText      string             `json:"sortText"`
+	FilterText    string             `json:"filterText"`
+}
+
+// ValueToInsert returns the text that should be placed into the editor buffer.
+func (item *CompletionItem) ValueToInsert() string {
+	if item.InsertText != "" {
+		return item.InsertText
+	}
+	return item.Label
+}
+
+// Completion queries completion candidates at the given 0-based line and column.
+func (c *Client) Completion(ctx context.Context, filePath string, line0, col0 int) ([]CompletionItem, error) {
+	if !c.IsAvailable() {
+		return nil, ErrClientClosed
+	}
+
+	params := map[string]interface{}{
+		"textDocument": map[string]interface{}{
+			"uri": PathToURI(filePath),
+		},
+		"position": map[string]interface{}{
+			"line":      line0,
+			"character": col0,
+		},
+	}
+
+	resp, err := c.call(ctx, "textDocument/completion", params)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil || len(resp.Result) == 0 || string(resp.Result) == "null" {
+		return nil, nil
+	}
+
+	// LSP specifies completion can return either []CompletionItem or CompletionList { isIncomplete, items }
+	var directList []CompletionItem
+	if err := json.Unmarshal(resp.Result, &directList); err == nil {
+		return directList, nil
+	}
+
+	var completionList struct {
+		IsIncomplete bool             `json:"isIncomplete"`
+		Items        []CompletionItem `json:"items"`
+	}
+	if err := json.Unmarshal(resp.Result, &completionList); err == nil {
+		return completionList.Items, nil
+	}
+
+	return nil, fmt.Errorf("failed to parse completion result: %s", string(resp.Result))
 }
 
 // SemanticTokenSpan represents a decoded semantic highlight token

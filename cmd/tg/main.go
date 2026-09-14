@@ -48,6 +48,8 @@ func main() {
 	editor := app.GetEditor()
 	userScreen := app.GetUserScreen()
 
+	var triggerCompletion func()
+
 	// Action dispatcher
 	var dispatchAction func(actionID string)
 	dispatchAction = func(actionID string) {
@@ -420,6 +422,8 @@ func main() {
 		case "edit_select_all":
 			editor.SelectAll()
 			app.SetStatusMessage("All text selected")
+		case "edit_complete":
+			triggerCompletion()
 		case "help_about":
 			aboutDlg.Show()
 		}
@@ -450,6 +454,49 @@ func main() {
 				app.RequestSemanticTokens()
 			}
 		})
+	}
+
+	completionPopup := app.GetCompletionPopup()
+
+	// triggerCompletion initiates asynchronous LSP completion query and shows popup
+	triggerCompletion = func() {
+		lspClient := app.GetLSP()
+		if lspClient == nil || !lspClient.IsAvailable() || editor.FilePath == "" {
+			return
+		}
+		// Sync latest buffer before requesting completion
+		_ = lspClient.DidChange(editor.FilePath, strings.Join(editor.Lines, "\n"))
+
+		filePath := editor.FilePath
+		line0 := editor.CursorY
+		col0 := editor.CursorX
+		pref, startCol := editor.GetWordPrefixAtCursor()
+
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 1200*time.Millisecond)
+			defer cancel()
+
+			items, err := lspClient.Completion(ctx, filePath, line0, col0)
+			if err != nil || len(items) == 0 {
+				return
+			}
+
+			// Calculate screen coordinates for popup placement
+			w, h := screen.Size()
+			editorInteriorX := 1
+			editorInteriorY := 2
+			editorInteriorW := w - 2
+			editorInteriorH := h - 4
+			cursorScreenX, cursorScreenY := editor.GetCursorScreenPos(editorInteriorX, editorInteriorY, editorInteriorW, editorInteriorH)
+
+			completionPopup.Show(items, startCol, cursorScreenX, cursorScreenY, w, h)
+			if pref != "" {
+				completionPopup.SetFilter(pref)
+			}
+			if completionPopup.IsVisible() {
+				_ = screen.PostEvent(tcell.NewEventInterrupt(nil))
+			}
+		}()
 	}
 
 	// Main event loop
@@ -596,6 +643,59 @@ func main() {
 				continue
 			}
 
+			// 2.1 Completion Popup Focus (Rule 48: Strict Modal Focus Trapping)
+			if completionPopup.IsVisible() {
+				switch key {
+				case tcell.KeyUp:
+					completionPopup.MoveUp()
+					continue
+				case tcell.KeyDown:
+					completionPopup.MoveDown()
+					continue
+				case tcell.KeyPgUp:
+					completionPopup.PageUp()
+					continue
+				case tcell.KeyPgDn:
+					completionPopup.PageDown()
+					continue
+				case tcell.KeyEnter, tcell.KeyTab:
+					sel := completionPopup.GetSelected()
+					if sel != nil {
+						editor.ApplyCompletion(completionPopup.TriggerCol, sel.ValueToInsert())
+						completionPopup.Hide()
+						triggerLSPDebounce()
+					} else {
+						completionPopup.Hide()
+					}
+					continue
+				case tcell.KeyEscape:
+					completionPopup.Hide()
+					continue
+				case tcell.KeyBackspace, tcell.KeyBackspace2:
+					editor.Backspace()
+					triggerLSPDebounce()
+					if editor.CursorX <= completionPopup.TriggerCol {
+						completionPopup.Hide()
+					} else {
+						pref, _ := editor.GetWordPrefixAtCursor()
+						completionPopup.SetFilter(pref)
+					}
+					continue
+				case tcell.KeyRune:
+					editor.InsertRune(ch)
+					triggerLSPDebounce()
+					if ui.IsWordRune(ch) {
+						pref, _ := editor.GetWordPrefixAtCursor()
+						completionPopup.SetFilter(pref)
+					} else if ch == '.' {
+						triggerCompletion()
+					} else {
+						completionPopup.Hide()
+					}
+					continue
+				}
+			}
+
 			// 3. Global Shortcuts (Turbo C / Turbo Pascal Standard Alt combinations)
 			isAlt := (mod == tcell.ModAlt)
 
@@ -716,6 +816,10 @@ func main() {
 				} else if key == tcell.KeyCtrlV {
 					// Ctrl+V: Paste
 					dispatchAction("edit_paste")
+					continue
+				} else if key == tcell.KeyCtrlSpace || (key == tcell.KeyCtrlN && mod&tcell.ModCtrl != 0) || (ch == ' ' && mod&tcell.ModCtrl != 0) {
+					// Ctrl+Space: Code complete
+					dispatchAction("edit_complete")
 					continue
 				} else if key == tcell.KeyCtrlA {
 					// Ctrl+A: Select All
@@ -912,6 +1016,9 @@ func main() {
 			case tcell.KeyRune:
 				editor.InsertRune(ch)
 				triggerLSPDebounce()
+				if ch == '.' {
+					triggerCompletion()
+				}
 			}
 		}
 	}

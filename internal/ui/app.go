@@ -33,6 +33,7 @@ type App struct {
 	debugger    *debugger.Debugger
 	watchWindow *WatchWindow
 	lspClient   *lsp.Client
+	completionPopup *CompletionPopup
 
 	// Modal Dialogs
 	compileDialog   Dialog
@@ -51,16 +52,17 @@ type App struct {
 func NewAppWithScreen(s tcell.Screen, initialFile string) *App {
 	w, h := s.Size()
 	return &App{
-		screen:      s,
-		running:     true,
-		width:       w,
-		height:      h,
-		menuBar:     NewMenuBar(),
-		statusBar:   NewStatusBar(),
-		userScreen:  NewUserScreen(),
-		editor:      NewEditor(initialFile, 1),
-		debugger:    debugger.NewDebugger(),
-		watchWindow: NewWatchWindow(2),
+		screen:          s,
+		running:         true,
+		width:           w,
+		height:          h,
+		menuBar:         NewMenuBar(),
+		statusBar:       NewStatusBar(),
+		userScreen:      NewUserScreen(),
+		editor:          NewEditor(initialFile, 1),
+		debugger:        debugger.NewDebugger(),
+		watchWindow:     NewWatchWindow(2),
+		completionPopup: NewCompletionPopup(),
 	}
 }
 
@@ -214,6 +216,10 @@ func (a *App) Stop() {
 
 func (a *App) GetLSP() *lsp.Client {
 	return a.lspClient
+}
+
+func (a *App) GetCompletionPopup() *CompletionPopup {
+	return a.completionPopup
 }
 
 // RequestSemanticTokens requests semantic tokens for current editor file asynchronously
@@ -564,13 +570,18 @@ func (a *App) Redraw() {
 		a.searchResultsDialog.Draw(a.screen, a.width, a.height)
 	}
 
-	// 4. Draw Top MenuBar (row 0)
+	// 4. Draw Completion Popup if visible (highest floating window priority below menu)
+	if a.completionPopup != nil && a.completionPopup.IsVisible() {
+		a.completionPopup.Draw(a.screen)
+	}
+
+	// 5. Draw Top MenuBar (row 0)
 	a.menuBar.Draw(a.screen, a.width)
 	if a.menuBar.Active {
 		a.screen.HideCursor()
 	}
 
-	// 5. Draw Bottom StatusBar (row height-1)
+	// 6. Draw Bottom StatusBar (row height-1)
 	a.statusBar.Draw(a.screen, a.height-1, a.width)
 
 	a.screen.Show()

@@ -1404,3 +1404,100 @@ func (e *Editor) PasteText(text string) {
 	}
 	e.Dirty = true
 }
+
+// GetCursorScreenPos returns the absolute screen coordinates (screenX, screenY) of the cursor.
+func (e *Editor) GetCursorScreenPos(interiorX, interiorY, interiorW, interiorH int) (int, int) {
+	lineNumWidth := 0
+	if e.ShowLineNums {
+		lineNumWidth = 5
+	}
+	codeStartX := interiorX + lineNumWidth
+
+	cursorScreenY := interiorY + (e.CursorY - e.ScrollY)
+
+	// Calculate visual column on line considering tabs
+	screenX := codeStartX
+	tabW := e.TabWidth
+	if tabW <= 0 {
+		tabW = 4
+	}
+
+	if e.CursorY >= 0 && e.CursorY < len(e.Lines) {
+		runes := []rune(e.Lines[e.CursorY])
+		for col := e.ScrollX; col < e.CursorX && col < len(runes); col++ {
+			if runes[col] == '\t' {
+				relCol := screenX - codeStartX
+				spaces := tabW - (relCol % tabW)
+				screenX += spaces
+			} else {
+				screenX += runewidth.RuneWidth(runes[col])
+			}
+		}
+	} else {
+		screenX = codeStartX + (e.CursorX - e.ScrollX)
+	}
+
+	return screenX, cursorScreenY
+}
+
+// GetWordPrefixAtCursor returns the word prefix currently before the cursor and its 0-based start column.
+func (e *Editor) GetWordPrefixAtCursor() (string, int) {
+	if e.CursorY < 0 || e.CursorY >= len(e.Lines) {
+		return "", e.CursorX
+	}
+	runes := []rune(e.Lines[e.CursorY])
+	if e.CursorX < 0 || e.CursorX > len(runes) {
+		return "", e.CursorX
+	}
+
+	isIdent := func(r rune) bool {
+		return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_'
+	}
+
+	start := e.CursorX
+	for start > 0 && isIdent(runes[start-1]) {
+		start--
+	}
+
+	return string(runes[start:e.CursorX]), start
+}
+
+// ApplyCompletion inserts the completion text at startCol, replacing any prefix up to CursorX.
+func (e *Editor) ApplyCompletion(startCol int, insertText string) {
+	if insertText == "" {
+		return
+	}
+	e.SaveSnapshot()
+	if e.CursorY < 0 || e.CursorY >= len(e.Lines) {
+		return
+	}
+
+	runes := []rune(e.Lines[e.CursorY])
+	if startCol < 0 {
+		startCol = 0
+	}
+	if startCol > len(runes) {
+		startCol = len(runes)
+	}
+	currX := e.CursorX
+	if currX < startCol {
+		currX = startCol
+	}
+	if currX > len(runes) {
+		currX = len(runes)
+	}
+
+	prefix := runes[:startCol]
+	suffix := runes[currX:]
+	insRunes := []rune(insertText)
+
+	newLine := make([]rune, 0, len(prefix)+len(insRunes)+len(suffix))
+	newLine = append(newLine, prefix...)
+	newLine = append(newLine, insRunes...)
+	newLine = append(newLine, suffix...)
+
+	e.Lines[e.CursorY] = string(newLine)
+	e.CursorX = startCol + len(insRunes)
+	e.Dirty = true
+}
+
