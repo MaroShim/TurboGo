@@ -1,6 +1,7 @@
 package debugger
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"net/rpc/jsonrpc"
@@ -149,6 +150,7 @@ type Debugger struct {
 	state              DebugState
 	activeBin          string
 	currentGoroutineID int
+	outputBuf          strings.Builder
 }
 
 func NewDebugger() *Debugger {
@@ -382,6 +384,8 @@ func (d *Debugger) StartSession(binaryPath string, workDir string, currentFile s
 	d.stopSessionLocked()
 	d.activeBin = binaryPath
 
+	d.outputBuf.Reset()
+
 	d.dlvCmd = exec.Command(
 		dlvPath,
 		"exec",
@@ -393,6 +397,23 @@ func (d *Debugger) StartSession(binaryPath string, workDir string, currentFile s
 	)
 	if workDir != "" {
 		d.dlvCmd.Dir = workDir
+	}
+
+	stdoutPipe, pErr := d.dlvCmd.StdoutPipe()
+	if pErr == nil {
+		d.dlvCmd.Stderr = d.dlvCmd.Stdout
+		go func() {
+			scanner := bufio.NewScanner(stdoutPipe)
+			for scanner.Scan() {
+				line := scanner.Text()
+				if strings.HasPrefix(line, "API server listening at:") {
+					continue
+				}
+				d.mu.Lock()
+				d.outputBuf.WriteString(line + "\n")
+				d.mu.Unlock()
+			}
+		}()
 	}
 
 	if err := d.dlvCmd.Start(); err != nil {
@@ -710,3 +731,11 @@ func (d *Debugger) IsActive() bool {
 	defer d.mu.Unlock()
 	return d.state.Active && !d.state.Exited
 }
+
+// GetProgramOutput returns standard output/error produced by the running debug program
+func (d *Debugger) GetProgramOutput() string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.outputBuf.String()
+}
+
