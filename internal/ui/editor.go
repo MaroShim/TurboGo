@@ -24,6 +24,7 @@ type Editor struct {
 	ScrollY      int
 	FilePath     string
 	FileName     string
+	IsUntitled   bool
 	Dirty        bool
 	ShowLineNums bool
 	WindowNumber int
@@ -106,6 +107,7 @@ func NewEditor(filePath string, windowNum int) *Editor {
 		CursorY:           0,
 		FilePath:          filePath,
 		FileName:          "NONAME00.GO",
+		IsUntitled:        filePath == "",
 		ShowLineNums:      false,
 		WindowNumber:      windowNum,
 		TabWidth:          4,
@@ -193,6 +195,7 @@ func (e *Editor) LoadFile(path string) error {
 	e.Lines = lines
 	e.FilePath = cleanedPath
 	e.FileName = filepath.Base(cleanedPath)
+	e.IsUntitled = false
 	e.Dirty = false
 	e.CursorX = 0
 	e.CursorY = 0
@@ -245,10 +248,13 @@ func (e *Editor) SaveFile() error {
 	if e.FilePath == "" || e.FilePath == "NONAME00.GO" {
 		e.FilePath = "main.go"
 		e.FileName = "main.go"
+		e.IsUntitled = false
 	}
 	cleanedPath := filepath.Clean(e.FilePath)
 	e.FilePath = cleanedPath
-	e.FileName = filepath.Base(cleanedPath)
+	if !e.IsUntitled {
+		e.FileName = filepath.Base(cleanedPath)
+	}
 
 	dir := filepath.Dir(cleanedPath)
 	if dir == "" {
@@ -297,6 +303,7 @@ func (e *Editor) SaveFile() error {
 }
 
 func (e *Editor) SaveAs(path string) error {
+	e.IsUntitled = false
 	e.FilePath = path
 	e.FileName = filepath.Base(path)
 	return e.SaveFile()

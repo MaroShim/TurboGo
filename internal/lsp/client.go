@@ -650,10 +650,39 @@ type CompletionItem struct {
 	Label         string             `json:"label"`
 	Kind          CompletionItemKind `json:"kind"`
 	Detail        string             `json:"detail"`
-	Documentation string             `json:"documentation,omitempty"`
+	Documentation string             `json:"-"`
 	InsertText    string             `json:"insertText"`
 	SortText      string             `json:"sortText"`
 	FilterText    string             `json:"filterText"`
+}
+
+// UnmarshalJSON handles both raw string and MarkupContent for documentation
+func (item *CompletionItem) UnmarshalJSON(data []byte) error {
+	type Alias CompletionItem
+	aux := struct {
+		*Alias
+		RawDoc json.RawMessage `json:"documentation,omitempty"`
+	}{
+		Alias: (*Alias)(item),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if len(aux.RawDoc) > 0 {
+		var str string
+		if err := json.Unmarshal(aux.RawDoc, &str); err == nil {
+			item.Documentation = str
+		} else {
+			var markup struct {
+				Kind  string `json:"kind"`
+				Value string `json:"value"`
+			}
+			if err := json.Unmarshal(aux.RawDoc, &markup); err == nil {
+				item.Documentation = markup.Value
+			}
+		}
+	}
+	return nil
 }
 
 // ValueToInsert returns the text that should be placed into the editor buffer.

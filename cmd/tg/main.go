@@ -55,30 +55,53 @@ func main() {
 	dispatchAction = func(actionID string) {
 		switch actionID {
 		case "file_new":
+			oldPath := editor.FilePath
 			*editor = *ui.NewEditor("", editor.WindowNumber)
+			scratchFile := app.EnsureScratchBuffer()
+			editor.FilePath = scratchFile
+			editor.FileName = "NONAME00.GO"
+			editor.IsUntitled = true
+			_ = os.WriteFile(scratchFile, []byte(strings.Join(editor.Lines, "\n")), 0644)
+			if lspClient := app.GetLSP(); lspClient != nil && lspClient.IsAvailable() {
+				if oldPath != "" && oldPath != scratchFile {
+					_ = lspClient.DidClose(oldPath)
+				}
+				_ = lspClient.DidOpen(editor.FilePath, strings.Join(editor.Lines, "\n"))
+				app.RequestSemanticTokens()
+			}
+			app.SetStatusMessage("New file created (NONAME00.GO)")
 		case "file_open":
 			openDlg.Show(".", func(path string) {
+				oldPath := editor.FilePath
 				if err := editor.LoadFile(path); err != nil {
 					sound.PlayError()
 					app.SetStatusMessage("Error opening " + filepath.Base(path) + ": " + err.Error())
 				} else {
 					app.SetStatusMessage("Opened " + editor.FileName)
 					if lspClient := app.GetLSP(); lspClient != nil && lspClient.IsAvailable() {
+						if oldPath != "" && oldPath != editor.FilePath {
+							_ = lspClient.DidClose(oldPath)
+						}
 						_ = lspClient.DidOpen(editor.FilePath, strings.Join(editor.Lines, "\n"))
 						app.RequestSemanticTokens()
 					}
 				}
 			})
 		case "file_save":
-			if editor.FilePath == "" || editor.FilePath == "NONAME00.GO" {
+			if editor.IsUntitled || editor.FilePath == "" || editor.FileName == "NONAME00.GO" {
 				saveDlg.Show("main.go", func(path string) {
+					oldPath := editor.FilePath
 					if err := editor.SaveAs(path); err != nil {
 						sound.PlayError()
 						app.SetStatusMessage("Error saving " + filepath.Base(path) + ": " + err.Error())
 					} else {
+						editor.IsUntitled = false
 						sound.PlaySuccess()
 						app.SetStatusMessage("Saved " + editor.FileName)
 						if lspClient := app.GetLSP(); lspClient != nil && lspClient.IsAvailable() {
+							if oldPath != "" && oldPath != editor.FilePath {
+								_ = lspClient.DidClose(oldPath)
+							}
 							_ = lspClient.DidOpen(editor.FilePath, strings.Join(editor.Lines, "\n"))
 							app.RequestSemanticTokens()
 						}
@@ -99,17 +122,22 @@ func main() {
 			}
 		case "file_save_as":
 			defaultName := editor.FileName
-			if defaultName == "" || defaultName == "NONAME00.GO" {
+			if defaultName == "" || defaultName == "NONAME00.GO" || editor.IsUntitled {
 				defaultName = "main.go"
 			}
 			saveDlg.Show(defaultName, func(path string) {
+				oldPath := editor.FilePath
 				if err := editor.SaveAs(path); err != nil {
 					sound.PlayError()
 					app.SetStatusMessage("Error saving " + filepath.Base(path) + ": " + err.Error())
 				} else {
+					editor.IsUntitled = false
 					sound.PlaySuccess()
 					app.SetStatusMessage("Saved " + editor.FileName)
 					if lspClient := app.GetLSP(); lspClient != nil && lspClient.IsAvailable() {
+						if oldPath != "" && oldPath != editor.FilePath {
+							_ = lspClient.DidClose(oldPath)
+						}
 						_ = lspClient.DidOpen(editor.FilePath, strings.Join(editor.Lines, "\n"))
 						app.RequestSemanticTokens()
 					}
@@ -470,10 +498,18 @@ func main() {
 		filePath := editor.FilePath
 		line0 := editor.CursorY
 		col0 := editor.CursorX
-		pref, startCol := editor.GetWordPrefixAtCursor()
+		_, startCol := editor.GetWordPrefixAtCursor()
+
+		// Calculate screen coordinates immediately on main event loop before spawning goroutine
+		w, h := screen.Size()
+		editorInteriorX := 1
+		editorInteriorY := 2
+		editorInteriorW := w - 2
+		editorInteriorH := h - 4
+		cursorScreenX, cursorScreenY := editor.GetCursorScreenPos(editorInteriorX, editorInteriorY, editorInteriorW, editorInteriorH)
 
 		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 1200*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 
 			items, err := lspClient.Completion(ctx, filePath, line0, col0)
@@ -481,17 +517,11 @@ func main() {
 				return
 			}
 
-			// Calculate screen coordinates for popup placement
-			w, h := screen.Size()
-			editorInteriorX := 1
-			editorInteriorY := 2
-			editorInteriorW := w - 2
-			editorInteriorH := h - 4
-			cursorScreenX, cursorScreenY := editor.GetCursorScreenPos(editorInteriorX, editorInteriorY, editorInteriorW, editorInteriorH)
-
 			completionPopup.Show(items, startCol, cursorScreenX, cursorScreenY, w, h)
-			if pref != "" {
-				completionPopup.SetFilter(pref)
+			// Only filter if user typed identifier characters after trigger column
+			currentPref, _ := editor.GetWordPrefixAtCursor()
+			if currentPref != "" {
+				completionPopup.SetFilter(currentPref)
 			}
 			if completionPopup.IsVisible() {
 				_ = screen.PostEvent(tcell.NewEventInterrupt(nil))

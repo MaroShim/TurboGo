@@ -47,6 +47,9 @@ type App struct {
 
 	// Callbacks for modal interaction
 	onAction func(actionID string)
+
+	workDir    string
+	scratchDir string
 }
 
 func NewAppWithScreen(s tcell.Screen, initialFile string) *App {
@@ -81,13 +84,20 @@ func NewApp(initialFile string) (*App, error) {
 
 	app := NewAppWithScreen(s, initialFile)
 
-	// Initialize LSP Client in background so it doesn't block UI startup
 	workDir := "."
 	if initialFile != "" {
 		workDir = filepath.Dir(initialFile)
 	}
 	if modRoot, hasMod := compiler.FindGoModuleRoot(workDir); hasMod {
 		workDir = modRoot
+	}
+	app.workDir = workDir
+
+	if initialFile == "" {
+		scratchFile := app.EnsureScratchBuffer()
+		app.editor.FilePath = scratchFile
+		app.editor.FileName = "NONAME00.GO"
+		app.editor.IsUntitled = true
 	}
 
 	go func() {
@@ -106,6 +116,22 @@ func NewApp(initialFile string) (*App, error) {
 	}()
 
 	return app, nil
+}
+
+// EnsureScratchBuffer creates a hermetic scratch directory and shadow main.go for untitled buffers
+func (a *App) EnsureScratchBuffer() string {
+	workDir := a.workDir
+	if workDir == "" {
+		workDir = "."
+	}
+	scratchDir := filepath.Join(workDir, ".tg_scratch")
+	_ = os.MkdirAll(scratchDir, 0755)
+	scratchFile := filepath.Join(scratchDir, "main.go")
+	if len(a.editor.Lines) > 0 {
+		_ = os.WriteFile(scratchFile, []byte(strings.Join(a.editor.Lines, "\n")), 0644)
+	}
+	a.scratchDir = scratchDir
+	return scratchFile
 }
 
 func (a *App) SetDialogs(
@@ -210,6 +236,9 @@ func (a *App) Stop() {
 	}
 	if a.lspClient != nil {
 		_ = a.lspClient.Close()
+	}
+	if a.scratchDir != "" {
+		_ = os.RemoveAll(a.scratchDir)
 	}
 	a.screen.Fini()
 }
