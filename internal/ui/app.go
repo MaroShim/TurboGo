@@ -44,6 +44,7 @@ type App struct {
 	gotoLineDialog  Dialog
 	findDialog          Dialog
 	searchResultsDialog Dialog
+	confirmSaveDialog   Dialog
 
 	// Callbacks for modal interaction
 	onAction func(actionID string)
@@ -156,6 +157,10 @@ func (a *App) SetFindDialog(findDlg Dialog) {
 
 func (a *App) SetSearchResultsDialog(dlg Dialog) {
 	a.searchResultsDialog = dlg
+}
+
+func (a *App) SetConfirmSaveDialog(dlg Dialog) {
+	a.confirmSaveDialog = dlg
 }
 
 func (a *App) SetActionHandler(handler func(actionID string)) {
@@ -598,6 +603,9 @@ func (a *App) Redraw() {
 	if a.searchResultsDialog != nil {
 		a.searchResultsDialog.Draw(a.screen, a.width, a.height)
 	}
+	if a.confirmSaveDialog != nil {
+		a.confirmSaveDialog.Draw(a.screen, a.width, a.height)
+	}
 
 	// 4. Draw Completion Popup if visible (highest floating window priority below menu)
 	if a.completionPopup != nil && a.completionPopup.IsVisible() {
@@ -621,7 +629,7 @@ func (a *App) HasModalVisible() bool {
 	for _, d := range []Dialog{
 		a.compileDialog, a.errorListDialog, a.openFileDialog,
 		a.saveFileDialog, a.aboutDialog, a.gotoLineDialog,
-		a.findDialog, a.searchResultsDialog,
+		a.findDialog, a.searchResultsDialog, a.confirmSaveDialog,
 	} {
 		if d != nil && d.IsVisible() {
 			return true
