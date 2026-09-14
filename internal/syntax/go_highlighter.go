@@ -7,13 +7,16 @@ import (
 )
 
 var (
-	ColorSyntaxKeyword = tcell.ColorYellow
-	ColorSyntaxType    = tcell.ColorLightCyan
-	ColorSyntaxString  = tcell.ColorLightCyan
-	ColorSyntaxNumber  = tcell.ColorLightGreen
-	ColorSyntaxComment = tcell.NewHexColor(0x808080) // Gray
-	ColorSyntaxBuiltin = tcell.ColorGreen
-	ColorSyntaxNormal  = tcell.ColorWhite
+	// VS Code Go Dark+ Palette tuned for crisp contrast on Borland Blue background
+	ColorSyntaxKeyword  = tcell.NewHexColor(0xFF79C6) // Pink / Magenta (VS Code #C586C0)
+	ColorSyntaxFunction = tcell.ColorYellow          // Bright Yellow (VS Code #DCDCAA)
+	ColorSyntaxType     = tcell.ColorLightCyan       // Mint / Cyan (VS Code #4EC9B0)
+	ColorSyntaxString   = tcell.NewHexColor(0xFFB86C) // Warm Peach / Orange (VS Code #CE9178)
+	ColorSyntaxNumber   = tcell.ColorLightGreen      // Soft Green (VS Code #B5CEA8)
+	ColorSyntaxComment  = tcell.NewHexColor(0x7EC684) // Calming Green / Sage (VS Code #6A9955)
+	ColorSyntaxBuiltin  = tcell.ColorLightCyan       // Cyan / Builtin
+	ColorSyntaxVariable = tcell.NewHexColor(0x9CDCFE) // Sky Blue (VS Code #9CDCFE)
+	ColorSyntaxNormal   = tcell.ColorWhite
 )
 
 var goKeywords = map[string]bool{
@@ -188,7 +191,7 @@ func HighlightLine(line string, baseStyle tcell.Style, inBlockComment *bool) []T
 					nextNonSpace++
 				}
 				if nextNonSpace < n && runes[nextNonSpace] == '(' {
-					style = baseStyle.Foreground(tcell.ColorWhite).Bold(true)
+					style = baseStyle.Foreground(ColorSyntaxFunction).Bold(true)
 				} else {
 					style = baseStyle.Foreground(ColorSyntaxNormal)
 				}

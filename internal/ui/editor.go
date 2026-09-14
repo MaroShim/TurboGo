@@ -888,23 +888,31 @@ func (e *Editor) Draw(screen tcell.Screen, x, y, width, height int, focused bool
 			lineText := e.Lines[lineIdx]
 			tokens := syntax.HighlightLine(lineText, lineBaseStyle, &inBlockComment)
 
-			// Apply LSP Semantic Tokens overlay if available for this line
+			// Apply LSP Semantic Tokens overlay if available for this line (VS Code Go Dark+ scheme)
 			if semSpans := e.GetSemanticTokensForLine(lineIdx); len(semSpans) > 0 {
 				for _, span := range semSpans {
 					var semStyle tcell.Style
 					switch span.TokenType {
 					case "function", "method":
-						semStyle = lineBaseStyle.Foreground(tcell.ColorWhite).Bold(true)
+						semStyle = lineBaseStyle.Foreground(tcell.ColorYellow).Bold(true) // VS Code #DCDCAA
 					case "type", "class", "enum", "interface", "struct", "typeParameter":
-						semStyle = lineBaseStyle.Foreground(tcell.ColorLightCyan)
+						semStyle = lineBaseStyle.Foreground(tcell.ColorLightCyan) // VS Code #4EC9B0
 					case "parameter":
-						semStyle = lineBaseStyle.Foreground(tcell.ColorLightGreen)
+						semStyle = lineBaseStyle.Foreground(tcell.NewHexColor(0x9CDCFE)) // VS Code #9CDCFE
 					case "variable", "property":
-						semStyle = lineBaseStyle.Foreground(tcell.ColorWhite)
+						semStyle = lineBaseStyle.Foreground(tcell.NewHexColor(0x9CDCFE)) // VS Code #9CDCFE
+					case "keyword":
+						semStyle = lineBaseStyle.Foreground(tcell.NewHexColor(0xFF79C6)).Bold(true) // VS Code #C586C0
 					case "namespace":
 						semStyle = lineBaseStyle.Foreground(tcell.ColorLightCyan).Bold(true)
 					case "macro":
 						semStyle = lineBaseStyle.Foreground(tcell.ColorYellow).Bold(true)
+					case "string":
+						semStyle = lineBaseStyle.Foreground(tcell.NewHexColor(0xFFB86C)) // VS Code #CE9178
+					case "number":
+						semStyle = lineBaseStyle.Foreground(tcell.ColorLightGreen) // VS Code #B5CEA8
+					case "comment":
+						semStyle = lineBaseStyle.Foreground(tcell.NewHexColor(0x7EC684)) // VS Code #6A9955
 					}
 
 					if semStyle != lineBaseStyle {
