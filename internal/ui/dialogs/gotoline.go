@@ -101,3 +101,37 @@ func (g *GotoLineDialog) Draw(screen tcell.Screen, screenW, screenH int) {
 	ui.DrawButton(screen, x+4, y+dialogH-2, 10, "OK", true)
 	ui.DrawButton(screen, x+18, y+dialogH-2, 10, "Cancel", false)
 }
+
+// HandleMouse processes mouse events when GotoLineDialog is open.
+func (g *GotoLineDialog) HandleMouse(mx, my int, btn tcell.ButtonMask, screenW, screenH int) bool {
+	if !g.Visible {
+		return false
+	}
+	dialogW := 36
+	dialogH := 9
+	x := (screenW - dialogW) / 2
+	y := (screenH - dialogH) / 2
+
+	if btn&tcell.Button1 != 0 {
+		// OK button: x+4, y+dialogH-2, width 10
+		if my == y+dialogH-2 && mx >= x+4 && mx < x+4+10 {
+			g.Confirm()
+			return true
+		}
+		// Cancel button: x+18, y+dialogH-2, width 10
+		if my == y+dialogH-2 && mx >= x+18 && mx < x+18+10 {
+			g.Hide()
+			return true
+		}
+
+		if mx >= x && mx < x+dialogW && my >= y && my < y+dialogH {
+			return true
+		}
+
+		// Click outside: cancel
+		g.Hide()
+		return true
+	}
+	return true
+}
+
