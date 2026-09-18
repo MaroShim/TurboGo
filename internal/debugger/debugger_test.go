@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"tg/internal/compiler"
+	"github.com/MaroShim/tg/internal/compiler"
 )
 
 func TestDebuggerBreakpoints(t *testing.T) {

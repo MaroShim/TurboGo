@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"tg/internal/ui"
+	"github.com/MaroShim/tg/internal/ui"
 )
 
 // OpenFileDialog allows selecting or typing a file path to open

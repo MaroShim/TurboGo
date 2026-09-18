@@ -5,7 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
-	"tg/internal/debugger"
+	"github.com/MaroShim/tg/internal/debugger"
 )
 
 // WatchWindow displays inspected variables and debugger status at the bottom of the IDE

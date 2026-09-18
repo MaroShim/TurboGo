@@ -90,15 +90,29 @@
 
 ---
 
-## Build & Run
+## Installation & Build
 
-**1. Build and run binary**
+### 1. Install directly via Go (Recommended)
 
 ```bash
+go install github.com/MaroShim/tg/cmd/tg@latest
+```
+
+Ensure `$GOPATH/bin` (or `~/go/bin`) is in your `$PATH`. You can then launch `tg` from anywhere:
+
+```bash
+tg
+```
+
+### 2. Build from Source
+
+```bash
+git clone https://github.com/MaroShim/tg.git
+cd tg
 go build -o bin/tg ./cmd/tg
 ./bin/tg
-
 ```
+
 
 # Turbo Go (Version 0.89)
 
@@ -174,15 +188,28 @@ go build -o bin/tg ./cmd/tg
 
 ---
 
-## 실행 및 빌드 방법
+## 설치 및 빌드 방법
 
-### 1. 바이너리 빌드 및 실행
+### 1. Go 명령어로 직접 설치 (권장)
+소스 코드를 별도로 clone하지 않고 터미널에서 즉시 설치하여 사용할 수 있습니다:
 ```bash
+go install github.com/MaroShim/tg/cmd/tg@latest
+```
+`$GOPATH/bin` (또는 `~/go/bin`)이 `$PATH` 환경 변수에 등록되어 있다면 어디서든 `tg`를 실행할 수 있습니다:
+```bash
+tg
+```
+
+### 2. 소스 코드에서 직접 빌드 및 실행
+```bash
+git clone https://github.com/MaroShim/tg.git
+cd tg
 go build -o bin/tg ./cmd/tg
 ./bin/tg
 ```
 
-### 2. 특정 Go 파일 열기
+### 3. 특정 Go 파일 열기
 ```bash
 ./bin/tg examples/hello.go
 ```
+

@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"tg/internal/compiler"
-	"tg/internal/lsp"
-	"tg/internal/sound"
-	"tg/internal/ui"
-	"tg/internal/ui/dialogs"
+	"github.com/MaroShim/tg/internal/compiler"
+	"github.com/MaroShim/tg/internal/lsp"
+	"github.com/MaroShim/tg/internal/sound"
+	"github.com/MaroShim/tg/internal/ui"
+	"github.com/MaroShim/tg/internal/ui/dialogs"
 )
 
 func main() {

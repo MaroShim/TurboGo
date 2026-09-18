@@ -5,7 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
-	"tg/internal/ui"
+	"github.com/MaroShim/tg/internal/ui"
 )
 
 // ConfirmChoice represents the user's decision in the confirm save dialog

@@ -6,7 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
-	"tg/internal/lsp"
+	"github.com/MaroShim/tg/internal/lsp"
 )
 
 // CompletionPopup renders an authentic Turbo Vision dropdown autocomplete box.

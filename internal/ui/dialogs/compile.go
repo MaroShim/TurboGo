@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/gdamore/tcell/v2"
-	"tg/internal/compiler"
-	"tg/internal/ui"
+	"github.com/MaroShim/tg/internal/compiler"
+	"github.com/MaroShim/tg/internal/ui"
 )
 
 // CompileDialog represents the classic Borland Compiling status box

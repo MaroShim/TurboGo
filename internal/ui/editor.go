@@ -11,8 +11,8 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
-	"tg/internal/lsp"
-	"tg/internal/syntax"
+	"github.com/MaroShim/tg/internal/lsp"
+	"github.com/MaroShim/tg/internal/syntax"
 )
 
 // Editor holds the state of a code editing buffer

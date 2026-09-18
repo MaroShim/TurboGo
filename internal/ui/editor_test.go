@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"tg/internal/lsp"
+	"github.com/MaroShim/tg/internal/lsp"
 )
 
 func TestEditorOperations(t *testing.T) {

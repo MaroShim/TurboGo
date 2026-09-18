@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"tg/internal/compiler"
+	"github.com/MaroShim/tg/internal/compiler"
 )
 
 func newSimScreen(t *testing.T) tcell.Screen {

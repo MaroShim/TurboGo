@@ -3,7 +3,7 @@ package ui
 import (
 	"testing"
 
-	"tg/internal/lsp"
+	"github.com/MaroShim/tg/internal/lsp"
 )
 
 func TestCompletionPopupNavigationAndFiltering(t *testing.T) {

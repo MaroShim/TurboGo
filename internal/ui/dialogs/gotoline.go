@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gdamore/tcell/v2"
-	"tg/internal/ui"
+	"github.com/MaroShim/tg/internal/ui"
 )
 
 // GotoLineDialog allows jumping directly to a line number

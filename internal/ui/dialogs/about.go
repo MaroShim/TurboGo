@@ -2,7 +2,7 @@ package dialogs
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"tg/internal/ui"
+	"github.com/MaroShim/tg/internal/ui"
 )
 
 // AboutDialog shows the retro Borland About information

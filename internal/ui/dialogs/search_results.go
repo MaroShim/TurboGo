@@ -6,8 +6,8 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
-	"tg/internal/compiler"
-	"tg/internal/ui"
+	"github.com/MaroShim/tg/internal/compiler"
+	"github.com/MaroShim/tg/internal/ui"
 )
 
 // SearchResultsDialog displays project search match list and allows jumping

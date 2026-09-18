@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"tg/internal/compiler"
-	"tg/internal/debugger"
-	"tg/internal/lsp"
+	"github.com/MaroShim/tg/internal/compiler"
+	"github.com/MaroShim/tg/internal/debugger"
+	"github.com/MaroShim/tg/internal/lsp"
 )
 
 // DialogHolder interfaces
