@@ -415,3 +415,88 @@ func (m *MenuBar) SetSoundEnabled(enabled bool) {
 		}
 	}
 }
+
+// HandleMouse processes mouse click events on the menu bar and dropdown.
+// Returns (actionID, handled) where actionID is non-empty if a menu item was chosen.
+func (m *MenuBar) HandleMouse(x, y int) (string, bool) {
+	// 1. Calculate menu titles geometry on row 0
+	xPos := 1
+	menuPositions := make([]int, len(m.Menus))
+	menuWidths := make([]int, len(m.Menus))
+	for i, menu := range m.Menus {
+		menuPositions[i] = xPos
+		// Menu Title has 1 space before, runes, 1 space after
+		w := 2 + len([]rune(menu.Title))
+		menuWidths[i] = w
+		xPos += w + 1 // +1 spacer
+	}
+
+	// 2. Click on row 0 (Menu Bar)
+	if y == 0 {
+		for i := range m.Menus {
+			startX := menuPositions[i]
+			endX := startX + menuWidths[i]
+			if x >= startX && x < endX {
+				if m.Active && m.ActiveMenu == i && m.OpenDropdown {
+					// Clicking the already open menu toggles it closed
+					m.Close()
+				} else {
+					m.OpenMenu(i)
+				}
+				return "", true
+			}
+		}
+		// Clicked on row 0 outside any menu title
+		if m.Active {
+			m.Close()
+			return "", true
+		}
+		return "", false
+	}
+
+	// 3. Click below row 0 when dropdown is open
+	if m.Active && m.OpenDropdown {
+		startX := menuPositions[m.ActiveMenu]
+		menu := m.Menus[m.ActiveMenu]
+
+		maxLabel := 0
+		maxShort := 0
+		for _, item := range menu.Items {
+			if item.IsSep {
+				continue
+			}
+			if len(item.Label) > maxLabel {
+				maxLabel = len(item.Label)
+			}
+			if len(item.Shortcut) > maxShort {
+				maxShort = len(item.Shortcut)
+			}
+		}
+		contentWidth := maxLabel + maxShort + 4
+		if contentWidth < 18 {
+			contentWidth = 18
+		}
+		ddWidth := contentWidth + 2
+
+		// Inside dropdown bounding box: rows 2 to 2+len(menu.Items)-1
+		if x >= startX && x < startX+ddWidth && y >= 2 && y < 2+len(menu.Items) {
+			itemIdx := y - 2
+			if itemIdx >= 0 && itemIdx < len(menu.Items) {
+				item := menu.Items[itemIdx]
+				if !item.IsSep && !item.Disabled && item.ActionID != "" {
+					act := item.ActionID
+					m.Close()
+					return act, true
+				}
+			}
+			return "", true
+		}
+
+		// Clicked outside dropdown
+		m.Close()
+		return "", true
+	}
+
+	return "", false
+}
+

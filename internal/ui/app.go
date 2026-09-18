@@ -183,6 +183,32 @@ func (a *App) GetMenuBar() *MenuBar {
 	return a.menuBar
 }
 
+func (a *App) GetStatusBar() *StatusBar {
+	return a.statusBar
+}
+
+// GetEditorInteriorBounds returns (interiorX, interiorY, interiorW, interiorH) of editor drawing rectangle
+func (a *App) GetEditorInteriorBounds() (int, int, int, int) {
+	totalWorkH := a.height - 2
+	winX := 0
+	winY := 1
+	winW := a.width - 2
+	if winW < 20 {
+		winW = 20
+	}
+
+	editorH := totalWorkH
+	if a.watchWindow.Visible && totalWorkH >= 12 {
+		watchH := totalWorkH / 3
+		if watchH < 6 {
+			watchH = 6
+		}
+		editorH = totalWorkH - watchH
+	}
+
+	return winX + 1, winY + 1, winW - 2, editorH - 2
+}
+
 func (a *App) SetStatusMessage(msg string) {
 	a.statusBar.SetMessage(msg)
 }

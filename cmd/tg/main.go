@@ -1112,6 +1112,72 @@ func main() {
 					triggerCompletion()
 				}
 			}
+
+		case *tcell.EventMouse:
+			mx, my := tev.Position()
+			btn := tev.Buttons()
+
+			// 1. Mouse wheel scrolling
+			if btn&tcell.WheelUp != 0 {
+				if !app.HasModalVisible() && !app.IsMenuActive() {
+					editor.ScrollLines(-3)
+				}
+				continue
+			}
+			if btn&tcell.WheelDown != 0 {
+				if !app.HasModalVisible() && !app.IsMenuActive() {
+					editor.ScrollLines(3)
+				}
+				continue
+			}
+
+			// 2. Left click or drag
+			if btn&tcell.Button1 != 0 {
+				// 2.1 Dismiss UserScreen if active
+				if userScreen.Active {
+					userScreen.Hide()
+					continue
+				}
+
+				// 2.2 Modal focus trapping (Rule 48): if modal is active, ignore clicks outside
+				if app.HasModalVisible() {
+					continue
+				}
+
+				// 2.3 MenuBar interaction (row 0 or active dropdown)
+				menuBar := app.GetMenuBar()
+				if menuBar.Active || my == 0 {
+					if act, handled := menuBar.HandleMouse(mx, my); handled {
+						if act != "" {
+							dispatchAction(act)
+						}
+						continue
+					}
+				}
+
+				// 2.4 StatusBar interaction (bottom row)
+				_, screenH := screen.Size()
+				screenW, _ := screen.Size()
+				statusBar := app.GetStatusBar()
+				if my == screenH-1 {
+					if act, handled := statusBar.HandleMouse(mx, my, screenH, screenW); handled {
+						if act != "" {
+							dispatchAction(act)
+						}
+						continue
+					}
+				}
+
+				// 2.5 Editor viewport interaction
+				intX, intY, intW, intH := app.GetEditorInteriorBounds()
+				// Detect drag if primary button is held and modifiers contain drag or simply continuous button1
+				isDrag := (tev.Modifiers()&tcell.ModNone != 0 && editor.SelectActive)
+				if editor.HandleMouseClick(intX, intY, intW, intH, mx, my, isDrag) {
+					triggerLSPDebounce()
+				}
+			} else {
+				// Button released - stop drag expansion
+			}
 		}
 	}
 }
