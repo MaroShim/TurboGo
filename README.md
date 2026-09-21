@@ -7,9 +7,11 @@
 
 ---
 
-## Initial Screen
+<p align="center">
+  <img src="docs/images/screenshot.png" alt="Turbo Go Screenshot" width="850">
+</p>
 
-<img width="956" height="751" alt="Image" src="https://github.com/user-attachments/assets/e9fabdc7-f2f2-4db5-81f0-f004f854a364" />
+---
 
 ## Key Features
 
@@ -126,6 +128,12 @@ go build -o bin/tg ./cmd/tg
 > **Retro Borland Turbo Pascal / Turbo C Look & Feel IDE for the Go Language**
 
 **Turbo Go**는 90년대 볼랜드(Borland)의 전설적인 **Turbo Pascal**과 **Turbo C** 특유의 비주얼 인터페이스(Turbo Vision 파란색 에디터 창, 이중선 프레임 `╔═╗`, 상단 드롭다운 메뉴바, 하단 핫키 바, `Alt+F5` User Screen)에 현대의 **Go 컴파일러 및 Delve 디버거**를 연동한 레트로 터미널 개발 환경(TUI IDE)입니다.
+
+---
+
+<p align="center">
+  <img src="docs/images/screenshot.png" alt="Turbo Go 스크린샷" width="850">
+</p>
 
 ---
 
