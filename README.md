@@ -14,39 +14,32 @@
 ## Key Features
 
 * **Classic Borland Turbo Vision UI**:
-* Signature Turbo Blue editor canvas (`#0000A8`) with double-line box-drawing characters (`╔═╗`, `║ ║`, `╚═╝`)
-* Text drop shadows and retro window headers (`[■] 1 NONAME00.GO [▲]`)
-* Top pull-down menu bar (`File`, `Edit`, `Search`, `Run`, `Compile`, `Debug`, `Window`, `Help`)
-* Bottom hotkey bar (`F1 Help`, `F2 Save`, `F3 Open`, `Alt+F9 Compile`, `F9 Make`, `Ctrl+F9 Run`, `Alt+F5 User`, `F10 Menu`)
-
+  * Signature Turbo Blue editor canvas (`#0000A8`) with double-line box-drawing characters (`╔═╗`, `║ ║`, `╚═╝`)
+  * Text drop shadows and retro window headers (`[■] 1 NONAME00.GO [▲]`)
+  * Top pull-down menu bar (`File`, `Edit`, `Search`, `Run`, `Compile`, `Debug`, `Window`, `Help`)
+  * Bottom hotkey bar (`F1 Help`, `F2 Save`, `F3 Open`, `Alt+F9 Compile`, `F9 Make`, `Ctrl+F9 Run`, `Alt+F5 User`, `F10 Menu`)
 
 * **Go Syntax Highlighting**:
-* Syntax highlighting for Go keywords, types, literals (strings, numbers, runes), built-in functions, and comments
-
+  * Syntax highlighting for Go keywords, types, literals (strings, numbers, runes), built-in functions, and comments
 
 * **Compiling Modal Dialog & Multi-File Project Support**:
-* Authentic Borland-style "Compiling..." modal dialog displaying target file, total lines, error/warning count, and elapsed build time
-* **Multi-File & Go Module Support**: Automatically detects `go.mod` modules or aggregates all package `.go` files in the directory so multi-file projects compile seamlessly
-* Displays file name, line number, and error messages on build failures, with **instant jump to error line (even across different files)** in the editor
-
+  * Authentic Borland-style "Compiling..." modal dialog displaying target file, total lines, error/warning count, and elapsed build time
+  * **Multi-File & Go Module Support**: Automatically detects `go.mod` modules or aggregates all package `.go` files in the directory so multi-file projects compile seamlessly
+  * Displays file name, line number, and error messages on build failures, with **instant jump to error line (even across different files)** in the editor
 
 * **Alt+F5 User Screen**:
-* The hallmark Turbo C feature: switch to a full-screen DOS console view to inspect execution output, and return to the IDE with any keypress
-
+  * The hallmark Turbo C feature: switch to a full-screen DOS console view to inspect execution output, and return to the IDE with any keypress
 
 * **Interactive Delve Debugger Integration**:
-* Toggle breakpoints (`●`) with `F4` ➔ highlighted across the entire line with a **solid red bar**
-* `F5` Start Debugging / Continue, `F8` Step Over, `F7` Trace Into
-* Active execution line highlighted with a **solid yellow bar**
-* Real-time variable inspection (name, type, value) via the bottom **Watches Window** (Debug menu)
-
+  * Toggle breakpoints (`●`) with `F4` ➔ highlighted across the entire line with a **solid red bar**
+  * `F5` Start Debugging / Continue, `F8` Step Over, `F7` Trace Into
+  * Active execution line highlighted with a **solid yellow bar**
+  * Real-time variable inspection (name, type, value) via the bottom **Watches Window** (Debug menu)
 
 * **Borland Retro Sound Effects (Sound FX)**:
-* Crisp dual-tone beep on successful compilation; deep error buzz on build failure
-* Satisfying ping audio feedback on breakpoint hits and stepping
-* Sound toggle via `F10` ➔ `Options` ➔ `Sound: ON / OFF`
-
-
+  * Crisp dual-tone beep on successful compilation; deep error buzz on build failure
+  * Satisfying ping audio feedback on breakpoint hits and stepping
+  * Sound toggle via `F10` ➔ `Options` ➔ `Sound: ON / OFF`
 
 ---
 

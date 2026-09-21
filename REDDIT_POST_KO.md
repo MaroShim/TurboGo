@@ -2,7 +2,7 @@
 
 안녕하세요 개발자 여러분!
 
-80년대 후반이나 90년대에 프로그래밍을 배우셨다면, **볼랜드 터보 파스칼 7.0 (Borland Turbo Pascal 7.0)**이나 **터보 C++ 3.0 (Turbo C++ 3.0)**의 마법 같은 경험을 기억하실 겁니다:
+80년대 후반이나 90년대에 프로그래밍을 배우셨다면, **볼랜드 터보 파스칼(Borland Turbo Pascal)**이나 **터보 C/C++(Turbo C/C++)**의 마법 같은 경험을 기억하실 겁니다:
 - 짙은 파란색 배경과 선명한 노란색 텍스트 및 메뉴
 - `Ctrl+F9`를 누르자마자 1초도 안 걸려 즉시 완료되는 컴파일
 - 텍스트 창에서 매끄럽게 작동하던 풀다운 메뉴, 대화 상자, 마우스 지원
@@ -95,8 +95,6 @@ git clone https://github.com/MaroShim/TurboGo.git && cd TurboGo && go build -o b
 - **Turbo Go**: [github.com/MaroShim/TurboGo](https://github.com/MaroShim/TurboGo)
 - **Turbo Rust**: [github.com/MaroShim/TurboRust](https://github.com/MaroShim/TurboRust)
 - **Turbo Fortran**: [github.com/MaroShim/TurboF77](https://github.com/MaroShim/TurboF77)
-
-*(게시 시 파란색 에디터 화면 스크린샷 1~2장을 함께 첨부하면 반응이 훨씬 좋습니다!)*
 
 ---
 

@@ -2,7 +2,7 @@
 
 Hey r/programming!
 
-If you learned programming in the late 80s or 90s, you probably remember the magic of **Borland Turbo Pascal 7.0** or **Turbo C++ 3.0**:
+If you learned programming in the late 80s or 90s, you probably remember the magic of **Borland Turbo Pascal** or **Turbo C/C++**:
 - That iconic dark blue background with crisp yellow text and menus
 - Instant sub-second compilation at the press of `Ctrl+F9`
 - Pull-down menus, dialog boxes, and mouse support that worked seamlessly in a text window
@@ -95,8 +95,6 @@ git clone https://github.com/MaroShim/TurboGo.git && cd TurboGo && go build -o b
 - **Turbo Go**: [github.com/MaroShim/TurboGo](https://github.com/MaroShim/TurboGo)
 - **Turbo Rust**: [github.com/MaroShim/TurboRust](https://github.com/MaroShim/TurboRust)
 - **Turbo Fortran**: [github.com/MaroShim/TurboF77](https://github.com/MaroShim/TurboF77)
-
-*(Attaching 1–2 screenshots of the blue editor in action when posting gets great responses!)*
 
 ---
 
