@@ -2,3 +2,4 @@ bin/tg.exe~
 bin/
 .tg_scratch/
 dist/
+.DS_Store
