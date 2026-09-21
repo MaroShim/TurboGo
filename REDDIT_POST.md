@@ -42,45 +42,59 @@ So I wanted to bring back the lightning-fast, nostalgic experience of the old Bo
 
 ### Common Core Features Across All Three:
 
-* **Authentic Borland UI**:
-  - Classic blue screen, double-line boxes, pull-down menus (`Alt+F`, `Alt+S`, `Alt+R`, etc.), and PC speaker beeps on build/error.
+* **Authentic Borland Turbo Vision UI**:
+  - Classic Turbo Blue screen (`#0000A8`), double-line box frames (`╔═╗`), top pull-down menus with hotkey mnemonics, drop shadows, and PC speaker sound effects on build success/failure.
+* **Interactive Debugger & Real-time Watches Window**:
+  - `F4` to toggle breakpoints (`●`), `F5` start/continue, `F8` step over, `F7` trace into.
+  - Active execution line highlighted with a solid yellow bar.
+  - Built-in bottom **Watches Window** for live inspection of local variables, types, and values (`delve` for Go, `gdb/lldb` for Rust, and native internal/lldb engine for Fortran).
 * **Go to Definition (`F12`)**:
   - Put the cursor on any function, struct, type, or subroutine and press `F12` — it scans the entire multi-file project and jumps directly to the definition (auto-loading the target file if needed).
-* **Project-Wide Search (`Alt+F3`)**:
-  - Recursively searches all project source code with an interactive Borland-style modal dialog to browse and jump to results.
-* **Zero External Dependencies (Ultra-lightweight single binary)**:
-  - Built as a single static Go binary under 15MB. No Node.js, Python, or Electron runtime needed. Just drop the binary on any remote server and it launches in 0.01 seconds.
+* **Alt+F5 User Screen**:
+  - The iconic Turbo C feature: switch to a full-screen DOS-style console view to inspect raw execution output, and return to the IDE with any keypress.
+* **Modern Navigation & Editing**:
+  - Mnemonic single-letter hotkeys in dropdown menus (e.g. `File` ➔ `N` New, `O` Open, `S` Save, `A` Save As).
+  - Word-by-word cursor movement and block selection via `Ctrl+Left/Right` and macOS `Option+Left/Right`.
+* **Zero External Dependencies (Ultra-lightweight static binary)**:
+  - Built as a single static Go binary (~10-15MB). No Node.js, Python, or Electron runtime needed. Just drop the binary on any remote server or VM and it launches in 0.01 seconds.
 
 ---
 
 ### Quick Start & Installation
 
-Install directly via `go install`:
+#### 1. Download Pre-built Binaries (GitHub Releases)
+You can directly download pre-compiled standalone executables for **macOS (Apple Silicon)**, **Linux (x86_64)**, and **Windows (x64)** from the Releases page:
+- [Turbo Go Releases (v0.90)](https://github.com/MaroShim/TurboGo/releases/latest)
+- [Turbo Rust Releases (v0.90)](https://github.com/MaroShim/TurboRust/releases/latest)
+- [Turbo Fortran Releases (v0.90)](https://github.com/MaroShim/TurboF77/releases/latest)
+
+#### 2. Install directly via `go install`:
 
 ```bash
 # Turbo Go
 go install github.com/MaroShim/tg/cmd/tg@latest
 
 # Turbo Rust
-go install github.com/MaroShim/tr/cmd/tr@latest
+go install github.com/MaroShim/TurboRust/cmd/tr@latest
 
-# Turbo FORTRAN 77
+# Turbo Fortran (Classic F77 & Modern F90+)
 go install github.com/MaroShim/tf77/cmd/tf77@latest
+go install github.com/MaroShim/tf77/cmd/tf@latest
 ```
 
-Or build from source:
+#### 3. Or build from source:
 
 ```bash
-git clone https://github.com/MaroShim/tg.git && cd tg && go build -o bin/tg ./cmd/tg
+git clone https://github.com/MaroShim/TurboGo.git && cd TurboGo && go build -o bin/tg ./cmd/tg
 ```
 
 ---
 
 ### Repositories
 
-- **Turbo Go**: [github.com/MaroShim/tg](https://github.com/MaroShim/tg)
-- **Turbo Rust**: [github.com/MaroShim/tr](https://github.com/MaroShim/tr)
-- **Turbo FORTRAN 77**: [github.com/MaroShim/tf77](https://github.com/MaroShim/tf77)
+- **Turbo Go**: [github.com/MaroShim/TurboGo](https://github.com/MaroShim/TurboGo)
+- **Turbo Rust**: [github.com/MaroShim/TurboRust](https://github.com/MaroShim/TurboRust)
+- **Turbo Fortran**: [github.com/MaroShim/TurboF77](https://github.com/MaroShim/TurboF77)
 
 *(Attaching 1–2 screenshots of the blue editor in action when posting gets great responses!)*
 

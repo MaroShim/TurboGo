@@ -42,45 +42,59 @@ VS Code 같은 최신 IDE들도 정말 훌륭하지만, 원격 클라우드 VM, 
 
 ### 세 IDE의 공통 핵심 기능:
 
-* **정통 볼랜드 UI**:
-  - 고전적인 블루 스크린, 이중 테두리 박스, 풀다운 메뉴(`Alt+F`, `Alt+S`, `Alt+R` 등), 빌드 완료/에러 시 PC 스피커 비프음 지원.
+* **정통 볼랜드 Turbo Vision UI**:
+  - 시그니처 터보 블루 화면 (`#0000A8`), 이중 테두리 박스 프레임 (`╔═╗`), 단축키 강조(Mnemonic) 풀다운 메뉴, 입체 그림자, 빌드 성공/실패 시 정통 PC 스피커 사운드 이펙트.
+* **인터랙티브 디버거 & 실시간 변수 감시 (Watches Window)**:
+  - `F4`로 브레이크포인트(`●`) 설정/해제, `F5` 디버깅 시작/Continue, `F8` Step Over, `F7` Trace Into.
+  - 현재 실행 라인을 시각적으로 한눈에 포착하는 노란색 강조 바.
+  - 하단 **Watches Window**를 통해 로컬 변수명, 타입, 값을 실시간 감시 (Go: Delve, Rust: GDB/LLDB, Fortran: 네이티브 F77 인터프리터 및 LLDB 지원).
 * **정의로 이동 (`F12` / Go to Definition)**:
   - 함수, 구조체, 타입, 서브루틴 위에 커서를 두고 `F12`를 누르면, 멀티 파일 프로젝트 전체를 탐색하여 해당 정의 위치로 즉시 이동합니다(다른 파일에 있다면 자동 로드).
-* **프로젝트 전체 검색 (`Alt+F3` / Project-Wide Search)**:
-  - 프로젝트 내 모든 소스 코드를 재귀적으로 검색하며, 결과를 볼랜드 스타일의 모달 대화상자에서 바로 탐색 및 점프할 수 있습니다.
-* **외부 의존성 제로 (초경량 단일 바이너리)**:
-  - 15MB 이하의 단일 정적 Go 바이너리로 빌드됩니다. Node.js, Python, Electron 같은 런타임이 전혀 필요 없으며, 원격 서버에 바이너리 하나만 올리면 0.01초 만에 실행됩니다.
+* **Alt+F5 User Screen**:
+  - Turbo C의 상징적인 기능! 프로그램 실행 결과를 별도의 전체화면 콘솔 화면으로 전환하여 확인하고, 아무 키나 누르면 다시 IDE로 복귀.
+* **현대적인 조작성 및 단어 단위 이동**:
+  - 메뉴 드롭다운에서 알파벳 한 글자로 즉시 실행하는 서브메뉴 핫키 (예: `File` ➔ `N` New, `O` Open, `S` Save, `A` Save As).
+  - 텍스트 작성 중 `Ctrl+Left/Right` 및 macOS `Option+Left/Right`를 통한 단어 단위 고속 이동 및 블록 선택(`Shift` 조합).
+* **외부 의존성 제로 (초경량 단일 정적 바이너리)**:
+  - 약 10~15MB 크기의 단일 정적 Go 바이너리로 빌드됩니다. Node.js, Python, Electron 같은 런타임이 전혀 필요 없으며, 원격 서버나 저사양 VM에 파일 하나만 올리면 0.01초 만에 실행됩니다.
 
 ---
 
 ### 빠른 설치 및 실행
 
-`go install`을 통해 간편하게 설치할 수 있습니다:
+#### 1. 사전 빌드된 바이너리 다운로드 (GitHub Releases)
+Releases 페이지에서 **macOS (Apple Silicon)**, **Linux (x86_64)**, **Windows (x64)**용 단일 실행 파일을 즉시 다운로드하실 수 있습니다:
+- [Turbo Go 릴리즈 (v0.90)](https://github.com/MaroShim/TurboGo/releases/latest)
+- [Turbo Rust 릴리즈 (v0.90)](https://github.com/MaroShim/TurboRust/releases/latest)
+- [Turbo Fortran 릴리즈 (v0.90)](https://github.com/MaroShim/TurboF77/releases/latest)
+
+#### 2. `go install`을 통해 간편하게 설치:
 
 ```bash
 # Turbo Go
 go install github.com/MaroShim/tg/cmd/tg@latest
 
 # Turbo Rust
-go install github.com/MaroShim/tr/cmd/tr@latest
+go install github.com/MaroShim/TurboRust/cmd/tr@latest
 
-# Turbo FORTRAN 77
+# Turbo Fortran (클래식 F77 및 현대 F90+ 모두 지원)
 go install github.com/MaroShim/tf77/cmd/tf77@latest
+go install github.com/MaroShim/tf77/cmd/tf@latest
 ```
 
-또는 소스 코드에서 직접 빌드:
+#### 3. 소스 코드에서 직접 빌드:
 
 ```bash
-git clone https://github.com/MaroShim/tg.git && cd tg && go build -o bin/tg ./cmd/tg
+git clone https://github.com/MaroShim/TurboGo.git && cd TurboGo && go build -o bin/tg ./cmd/tg
 ```
 
 ---
 
 ### 저장소 링크
 
-- **Turbo Go**: [github.com/MaroShim/tg](https://github.com/MaroShim/tg)
-- **Turbo Rust**: [github.com/MaroShim/tr](https://github.com/MaroShim/tr)
-- **Turbo FORTRAN 77**: [github.com/MaroShim/tf77](https://github.com/MaroShim/tf77)
+- **Turbo Go**: [github.com/MaroShim/TurboGo](https://github.com/MaroShim/TurboGo)
+- **Turbo Rust**: [github.com/MaroShim/TurboRust](https://github.com/MaroShim/TurboRust)
+- **Turbo Fortran**: [github.com/MaroShim/TurboF77](https://github.com/MaroShim/TurboF77)
 
 *(게시 시 파란색 에디터 화면 스크린샷 1~2장을 함께 첨부하면 반응이 훨씬 좋습니다!)*
 
