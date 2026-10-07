@@ -31,12 +31,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.88] - 2026-09-14
 
 ### Added
-- **Classic Borland Turbo Vision UI**: Signature Turbo Blue canvas (`#0000A8`), double-line box borders (`╔═╗`), 3D text drop shadows, top pull-down menu bar, and bottom hotkey bar.
-- **Compiling Modal Dialog**: Authentic statistics modal showing target, total lines, error counts, and elapsed build time with instant jump to error lines.
-- **Multi-File & Go Module Support**: Automatic detection of `go.mod` roots and multi-file package aggregation.
-- **Interactive Delve Debugger**: Breakpoint toggling (`F4`) with full-width red highlight bars, active instruction pointer (`►`) with full-width yellow bars, Step Over (`F8`), Trace Into (`F7`), and bottom **Watches Window** for real-time variable inspection.
+- **LSP Code Completion Popup**: Real-time identifier autocompletion popup with authentic Turbo Vision double-line styling.
+- **Semantic Tokens Highlighting**: Hybrid syntax overlay with debounced server synchronization using VS Code Go Dark+ colors.
+- **Status Bar Visual Contrast**: Enhanced status bar message visibility with high-contrast background and padded layout.
+
+### Fixed
+- **Delve Output Streaming**: Stream live subprocess output to the `Alt+F5` User Screen buffer during active debugging sessions.
+
+## [0.80] - 2026-09-11
+
+### Added
+- **Code Navigation & Search**: Project-wide text search and `F12` Go to Definition with dedicated search results modal dialog.
+- **Navigation History Stack**: Multi-file jump history with bidirectional jump navigation (`Alt+Left` / `Alt+Right`).
+- **Multi-Level Undo/Redo**: Full buffer undo and redo stack supporting multi-step rollbacks.
+- **LSP Client Integration**: Native `gopls` client with server connection status badge and hover documentation snippets.
+- **Modular Example Suite**: Bundled modular Go example packages (`fibonacci`, `stats`, `concurrency`, and multi-file math suite).
+
+### Refactored
+- **Atomic File Safety**: Temporary swap file staging, atomic rename, automatic UTF-8 BOM stripping, and non-text binary file rejection.
+- **Native Terminal Cursor**: Centralized `DrawInputField` helper and native terminal cursor rendering.
+- **macOS Alt Key Dispatch**: Streamlined Alt/Meta key handling.
+
+### Fixed
+- **Delve Debugger Stability**: Synchronized breakpoint state across goroutines, isolated watch variable inspection, and dynamic breakpoint creation/removal during active sessions.
+- **Just My Code Debugging**: Automatically skip Go standard library and runtime internals during `F7` Trace Into.
+- **Multi-File Stepping**: Resolved multi-file breakpoint tracking and automatic active file switching.
+
+## [0.50] - 2026-09-08
+
+### Added
+- **Multi-File Package Compilation**: Automatic detection of `go.mod` module roots and multi-file Go package build support (`go build .`).
+- **Cross-Platform Clipboard**: Unified clipboard abstraction supporting system clipboard (`Ctrl+C`, `Ctrl+X`, `Ctrl+V`, `Ctrl+A`) with native escape and internal buffer fallback.
+
+## [0.10] - 2026-09-04
+
+### Added
+- **Classic Borland Turbo Vision UI**: Signature Turbo Blue canvas (`#0000A8`), double-line box frames (`╔═╗`), 3D text drop shadows, top pull-down menu bar (`F10`), and bottom hotkey bar.
+- **Go Code Editor**: Syntax highlighting for Go keywords, types, literals (strings, runes, numbers), built-in functions, and comments.
+- **Compiling Modal Dialog**: Authentic statistics modal showing target file, total lines, error counts, and elapsed build time with instant jump to error lines.
+- **Alt+F5 User Screen**: Dedicated full-screen console viewer to inspect program stdout/stderr and exit codes.
+- **Interactive Delve Debugger**: Breakpoint toggling (`F4`) with red highlight bar, active instruction pointer (`►`) with yellow highlight bar, Step Over (`F8`), Trace Into (`F7`), and bottom **Watches Window** for real-time variable inspection.
 - **Retro PC Speaker Sound Effects**: Dual-tone compilation success chime, failure buzz, and debugger step pings with audio toggle (`Options ➔ Sound`).
-- **Code Intelligence (LSP)**: `gopls` integration with real-time autocompletion popup, hover documentation snippets, and semantic tokens.
-- **Navigation Stack & Undo**: `F12` Go to Definition with multi-file jump history (`Alt+Left/Right` back/forward) and multi-step Undo/Redo stack.
-- **Atomic File Operations**: Safe atomic saves via swap files, UTF-8 BOM auto-stripping, and non-text binary file protection.
-- **Cross-Platform Clipboard**: Seamless integration with system clipboard (`Ctrl+C`, `Ctrl+X`, `Ctrl+V`, `Ctrl+A`).
+- **Automated Test Suite**: Unit tests for editor operations, UI components, syntax highlighting, and about dialog.
+
+## [0.01] - 2026-09-03
+
+### Added
+- **Initial Prototype**: Proof-of-concept Turbo Vision TUI shell and Go compiler runner.
